@@ -39,7 +39,11 @@ Agent 在執行前**必須檢查**此檔案是否存在：
 **設定檔結構**：
 ```json
 {
+  "anthropicApiKey": "",
   "geminiApiKey": "",
+  "openaiApiKey": "",
+  "openaiApiBase": "",
+  "openaiModel": "",
   "timeRange": 48,
   "topN": 15,
   "language": "zh",
@@ -85,21 +89,26 @@ cat ~/.hn-daily-digest/config.json 2>/dev/null || echo "NO_CONFIG"
 - 中文（推薦）
 - English
 
-### Step 1b：AI API Key（Gemini 優先，支援備援）
+### Step 1b：AI API Key（Anthropic 優先，Gemini 備援）
 
-若設定中沒有已儲存的 API Key，請告知使用者：
+若設定中沒有任何已儲存的 API Key，請告知使用者：
 
-> 請提供 Gemini API Key 作為主模型（可選再設定 OPENAI_API_KEY 備援）。
-> 取得方式：前往 https://aistudio.google.com/apikey 建立免費 API Key。
+> 請提供 AI API Key。優先順序：Anthropic Claude → Gemini → OpenAI-compatible。
+> - Anthropic：使用 `ANTHROPIC_API_KEY`（優先級最高）
+> - Gemini：前往 https://aistudio.google.com/apikey 建立免費 API Key
+> - OpenAI-compatible：設定 `OPENAI_API_KEY`（可搭配 `OPENAI_API_BASE` 用於 DeepSeek 等）
 
-若 `config.geminiApiKey` 已存在，跳過此步。
+若 `config.anthropicApiKey` 或 `config.geminiApiKey` 已存在，跳過此步。
 
 ### Step 2：執行腳本
 
 ```bash
 mkdir -p ./output
 
-export GEMINI_API_KEY="<key>"
+# API keys（優先順序：Anthropic → Gemini → OpenAI-compatible）
+# 也可以在 ~/.hn-daily-digest/config.json 中設定，env vars 優先
+export ANTHROPIC_API_KEY="<anthropic-key>"   # 最高優先
+export GEMINI_API_KEY="<key>"                # 備援
 # 可選：OpenAI 相容備援（DeepSeek/OpenAI 等）
 export OPENAI_API_KEY="<fallback-key>"
 export OPENAI_API_BASE="https://api.deepseek.com/v1"
@@ -118,7 +127,11 @@ npx -y bun ~/.claude/skills/ai-daily-digest/scripts/digest.ts \
 mkdir -p ~/.hn-daily-digest
 cat > ~/.hn-daily-digest/config.json << 'EOF'
 {
+  "anthropicApiKey": "<anthropic-key>",
   "geminiApiKey": "<key>",
+  "openaiApiKey": "",
+  "openaiApiBase": "",
+  "openaiModel": "",
   "timeRange": <hours>,
   "topN": <topN>,
   "language": "<zh|en>",
@@ -167,7 +180,9 @@ chmod 600 ~/.hn-daily-digest/config.json
 ## 環境需求
 
 - `bun` 執行環境（透過 `npx -y bun` 自動安裝）
-- 至少一個 AI API Key（`GEMINI_API_KEY` 或 `OPENAI_API_KEY`）
+- 至少一個 AI API Key（`ANTHROPIC_API_KEY`、`GEMINI_API_KEY` 或 `OPENAI_API_KEY`）
+- API Key 可透過環境變數或 `~/.hn-daily-digest/config.json` 設定（env vars 優先）
+- Provider 優先順序：Anthropic Claude → Gemini → OpenAI-compatible（自動降級）
 - 可選：`OPENAI_API_BASE`、`OPENAI_MODEL`（用於 OpenAI 相容介面）
 - 網路存取（需能存取 RSS 來源和 AI API）
 
@@ -185,11 +200,12 @@ chmod 600 ~/.hn-daily-digest/config.json
 
 ## 疑難排解
 
-### "GEMINI_API_KEY not set"
-需要提供 Gemini API Key，可在 https://aistudio.google.com/apikey 免費取得。
+### "Missing API key"
+需要至少一個 API Key。設定 `ANTHROPIC_API_KEY`（推薦）、`GEMINI_API_KEY`（免費）或 `OPENAI_API_KEY`。
+也可以在 `~/.hn-daily-digest/config.json` 中設定。
 
-### "Gemini 配額超限或請求失敗"
-腳本會自動降級到 OpenAI 相容介面（需提供 `OPENAI_API_KEY`，可選 `OPENAI_API_BASE`）。
+### "Anthropic/Gemini 請求失敗"
+腳本會自動降級到下一個可用的 provider（Anthropic → Gemini → OpenAI-compatible）。
 
 ### "Failed to fetch N feeds"
 部分 RSS 來源可能暫時無法存取，腳本會跳過失敗的來源並繼續處理。

@@ -1,5 +1,6 @@
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { homedir } from 'node:os';
 import process from 'node:process';
 
 // ============================================================================
@@ -120,8 +121,8 @@ const CATEGORY_META: Record<CategoryId, { emoji: string; label: string }> = {
   'ai-ml':       { emoji: '🤖', label: 'AI / ML' },
   'security':    { emoji: '🔒', label: '安全' },
   'engineering': { emoji: '⚙️', label: '工程' },
-  'tools':       { emoji: '🛠', label: '工具 / 开源' },
-  'opinion':     { emoji: '💡', label: '观点 / 杂谈' },
+  'tools':       { emoji: '🛠', label: '工具 / 開源' },
+  'opinion':     { emoji: '💡', label: '觀點 / 雜談' },
   'other':       { emoji: '📝', label: '其他' },
 };
 
@@ -439,6 +440,38 @@ async function callOpenAICompatible(
   return '';
 }
 
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
+
+async function callAnthropic(prompt: string, apiKey: string, model?: string): Promise<string> {
+  const response = await fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: model || ANTHROPIC_DEFAULT_MODEL,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      top_p: 0.8,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    throw new Error(`Anthropic API error (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json() as {
+    content?: Array<{ type: string; text: string }>;
+  };
+
+  return data.content?.find(c => c.type === 'text')?.text || '';
+}
+
 function inferOpenAIModel(apiBase: string): string {
   const base = apiBase.toLowerCase();
   if (base.includes('deepseek')) return 'deepseek-chat';
@@ -446,12 +479,17 @@ function inferOpenAIModel(apiBase: string): string {
 }
 
 function createAIClient(config: {
+  anthropicApiKey?: string;
+  anthropicModel?: string;
   geminiApiKey?: string;
   openaiApiKey?: string;
   openaiApiBase?: string;
   openaiModel?: string;
 }): AIClient {
   const state = {
+    anthropicApiKey: config.anthropicApiKey?.trim() || '',
+    anthropicModel: config.anthropicModel?.trim() || '',
+    anthropicEnabled: Boolean(config.anthropicApiKey?.trim()),
     geminiApiKey: config.geminiApiKey?.trim() || '',
     openaiApiKey: config.openaiApiKey?.trim() || '',
     openaiApiBase: (config.openaiApiBase?.trim() || OPENAI_DEFAULT_API_BASE).replace(/\/+$/, ''),
@@ -466,6 +504,25 @@ function createAIClient(config: {
 
   return {
     async call(prompt: string): Promise<string> {
+      // 1. Try Anthropic first (highest priority)
+      if (state.anthropicEnabled && state.anthropicApiKey) {
+        try {
+          return await callAnthropic(prompt, state.anthropicApiKey, state.anthropicModel || undefined);
+        } catch (error) {
+          if (state.geminiApiKey || state.openaiApiKey) {
+            if (!state.fallbackLogged) {
+              console.warn(`[digest] Anthropic failed, falling back. Reason: ${error instanceof Error ? error.message : String(error)}`);
+              state.fallbackLogged = true;
+            }
+            state.anthropicEnabled = false;
+            // fall through to Gemini or OpenAI
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // 2. Try Gemini
       if (state.geminiEnabled && state.geminiApiKey) {
         try {
           return await callGemini(prompt, state.geminiApiKey);
@@ -483,11 +540,12 @@ function createAIClient(config: {
         }
       }
 
+      // 3. Try OpenAI-compatible
       if (state.openaiApiKey) {
         return callOpenAICompatible(prompt, state.openaiApiKey, state.openaiApiBase, state.openaiModel);
       }
 
-      throw new Error('No AI API key configured. Set GEMINI_API_KEY and/or OPENAI_API_KEY.');
+      throw new Error('No AI API key configured. Set ANTHROPIC_API_KEY, GEMINI_API_KEY, and/or OPENAI_API_KEY.');
     },
   };
 }
@@ -510,46 +568,46 @@ function buildScoringPrompt(articles: Array<{ index: number; title: string; desc
     `Index ${a.index}: [${a.sourceName}] ${a.title}\n${a.description.slice(0, 300)}`
   ).join('\n\n---\n\n');
 
-  return `你是一个技术内容策展人，正在为一份面向技术爱好者的每日精选摘要筛选文章。
+  return `你是一個技術內容策展人，正在為一份面向技術愛好者的每日精選摘要篩選文章。
 
-请对以下文章进行三个维度的评分（1-10 整数，10 分最高），并为每篇文章分配一个分类标签和提取 2-4 个关键词。
+請對以下文章進行三個維度的評分（1-10 整數，10 分最高），並為每篇文章分配一個分類標籤和提取 2-4 個關鍵詞。
 
-## 评分维度
+## 評分維度
 
-### 1. 相关性 (relevance) - 对技术/编程/AI/互联网从业者的价值
-- 10: 所有技术人都应该知道的重大事件/突破
-- 7-9: 对大部分技术从业者有价值
-- 4-6: 对特定技术领域有价值
-- 1-3: 与技术行业关联不大
+### 1. 相關性 (relevance) - 對技術/程式/AI/網路從業者的價值
+- 10: 所有技術人都應該知道的重大事件/突破
+- 7-9: 對大部分技術從業者有價值
+- 4-6: 對特定技術領域有價值
+- 1-3: 與技術行業關聯不大
 
-### 2. 质量 (quality) - 文章本身的深度和写作质量
-- 10: 深度分析，原创洞见，引用丰富
-- 7-9: 有深度，观点独到
-- 4-6: 信息准确，表达清晰
-- 1-3: 浅尝辄止或纯转述
+### 2. 品質 (quality) - 文章本身的深度和寫作品質
+- 10: 深度分析，原創洞見，引用豐富
+- 7-9: 有深度，觀點獨到
+- 4-6: 資訊準確，表達清晰
+- 1-3: 淺嘗輒止或純轉述
 
-### 3. 时效性 (timeliness) - 当前是否值得阅读
-- 10: 正在发生的重大事件/刚发布的重要工具
-- 7-9: 近期热点相关
-- 4-6: 常青内容，不过时
-- 1-3: 过时或无时效价值
+### 3. 時效性 (timeliness) - 當前是否值得閱讀
+- 10: 正在發生的重大事件/剛發佈的重要工具
+- 7-9: 近期熱點相關
+- 4-6: 常青內容，不過時
+- 1-3: 過時或無時效價值
 
-## 分类标签（必须从以下选一个）
-- ai-ml: AI、机器学习、LLM、深度学习相关
-- security: 安全、隐私、漏洞、加密相关
-- engineering: 软件工程、架构、编程语言、系统设计
-- tools: 开发工具、开源项目、新发布的库/框架
-- opinion: 行业观点、个人思考、职业发展、文化评论
-- other: 以上都不太适合的
+## 分類標籤（必須從以下選一個）
+- ai-ml: AI、機器學習、LLM、深度學習相關
+- security: 安全、隱私、漏洞、加密相關
+- engineering: 軟體工程、架構、程式語言、系統設計
+- tools: 開發工具、開源專案、新發佈的函式庫/框架
+- opinion: 行業觀點、個人思考、職業發展、文化評論
+- other: 以上都不太適合的
 
-## 关键词提取
-提取 2-4 个最能代表文章主题的关键词（用英文，简短，如 "Rust", "LLM", "database", "performance"）
+## 關鍵詞提取
+提取 2-4 個最能代表文章主題的關鍵詞（用英文，簡短，如 "Rust", "LLM", "database", "performance"）
 
-## 待评分文章
+## 待評分文章
 
 ${articlesList}
 
-请严格按 JSON 格式返回，不要包含 markdown 代码块或其他文字：
+請嚴格按 JSON 格式返回，不要包含 markdown 程式碼區塊或其他文字：
 {
   "results": [
     {
@@ -635,39 +693,39 @@ function buildSummaryPrompt(
   ).join('\n\n---\n\n');
 
   const langInstruction = lang === 'zh'
-    ? '请用中文撰写摘要和推荐理由。如果原文是英文，请翻译为中文。标题翻译也用中文。'
+    ? '請用繁體中文撰寫摘要和推薦理由。如果原文是英文，請翻譯為繁體中文。標題翻譯也用繁體中文。'
     : 'Write summaries, reasons, and title translations in English.';
 
-  return `你是一个技术内容摘要专家。请为以下文章完成三件事：
+  return `你是一個技術內容摘要專家。請為以下文章完成三件事：
 
-1. **中文标题** (titleZh): 将英文标题翻译成自然的中文。如果原标题已经是中文则保持不变。
-2. **摘要** (summary): 4-6 句话的结构化摘要，让读者不点进原文也能了解核心内容。包含：
-   - 文章讨论的核心问题或主题（1 句）
-   - 关键论点、技术方案或发现（2-3 句）
-   - 结论或作者的核心观点（1 句）
-3. **推荐理由** (reason): 1 句话说明"为什么值得读"，区别于摘要（摘要说"是什么"，推荐理由说"为什么"）。
+1. **中文標題** (titleZh): 將英文標題翻譯成自然的繁體中文。如果原標題已經是中文則保持不變。
+2. **摘要** (summary): 4-6 句話的結構化摘要，讓讀者不點進原文也能了解核心內容。包含：
+   - 文章討論的核心問題或主題（1 句）
+   - 關鍵論點、技術方案或發現（2-3 句）
+   - 結論或作者的核心觀點（1 句）
+3. **推薦理由** (reason): 1 句話說明「為什麼值得讀」，區別於摘要（摘要說「是什麼」，推薦理由說「為什麼」）。
 
 ${langInstruction}
 
 摘要要求：
-- 直接说重点，不要用"本文讨论了..."、"这篇文章介绍了..."这种开头
-- 包含具体的技术名词、数据、方案名称或观点
-- 保留关键数字和指标（如性能提升百分比、用户数、版本号等）
-- 如果文章涉及对比或选型，要点出比较对象和结论
-- 目标：读者花 30 秒读完摘要，就能决定是否值得花 10 分钟读原文
+- 直接說重點，不要用「本文討論了...」、「這篇文章介紹了...」這種開頭
+- 包含具體的技術名詞、數據、方案名稱或觀點
+- 保留關鍵數字和指標（如效能提升百分比、使用者數、版本號等）
+- 如果文章涉及對比或選型，要點出比較對象和結論
+- 目標：讀者花 30 秒讀完摘要，就能決定是否值得花 10 分鐘讀原文
 
 ## 待摘要文章
 
 ${articlesList}
 
-请严格按 JSON 格式返回：
+請嚴格按 JSON 格式返回：
 {
   "results": [
     {
       "index": 0,
-      "titleZh": "中文翻译的标题",
-      "summary": "摘要内容...",
-      "reason": "推荐理由..."
+      "titleZh": "繁體中文翻譯的標題",
+      "summary": "摘要內容...",
+      "reason": "推薦理由..."
     }
   ]
 }`;
@@ -740,19 +798,19 @@ async function generateHighlights(
     `${i + 1}. [${a.category}] ${a.titleZh || a.title} — ${a.summary.slice(0, 100)}`
   ).join('\n');
 
-  const langNote = lang === 'zh' ? '用中文回答。' : 'Write in English.';
+  const langNote = lang === 'zh' ? '用繁體中文回答。' : 'Write in English.';
 
-  const prompt = `根据以下今日精选技术文章列表，写一段 3-5 句话的"今日看点"总结。
+  const prompt = `根據以下今日精選技術文章列表，寫一段 3-5 句話的「今日看點」總結。
 要求：
-- 提炼出今天技术圈的 2-3 个主要趋势或话题
-- 不要逐篇列举，要做宏观归纳
-- 风格简洁有力，像新闻导语
+- 提煉出今天技術圈的 2-3 個主要趨勢或話題
+- 不要逐篇列舉，要做宏觀歸納
+- 風格簡潔有力，像新聞導語
 ${langNote}
 
 文章列表：
 ${articleList}
 
-直接返回纯文本总结，不要 JSON，不要 markdown 格式。`;
+直接返回純文字總結，不要 JSON，不要 markdown 格式。`;
 
   try {
     const text = await aiClient.call(prompt);
@@ -773,8 +831,8 @@ function humanizeTime(pubDate: Date): string {
   const diffHours = Math.floor(diffMs / 3_600_000);
   const diffDays = Math.floor(diffMs / 86_400_000);
 
-  if (diffMins < 60) return `${diffMins} 分钟前`;
-  if (diffHours < 24) return `${diffHours} 小时前`;
+  if (diffMins < 60) return `${diffMins} 分鐘前`;
+  if (diffHours < 24) return `${diffHours} 小時前`;
   if (diffDays < 7) return `${diffDays} 天前`;
   return pubDate.toISOString().slice(0, 10);
 }
@@ -800,9 +858,9 @@ function generateKeywordBarChart(articles: ScoredArticle[]): string {
 
   let chart = '```mermaid\n';
   chart += `xychart-beta horizontal\n`;
-  chart += `    title "高频关键词"\n`;
+  chart += `    title "高頻關鍵詞"\n`;
   chart += `    x-axis [${labels}]\n`;
-  chart += `    y-axis "出现次数" 0 --> ${maxVal + 2}\n`;
+  chart += `    y-axis "出現次數" 0 --> ${maxVal + 2}\n`;
   chart += `    bar [${values}]\n`;
   chart += '```\n';
 
@@ -821,7 +879,7 @@ function generateCategoryPieChart(articles: ScoredArticle[]): string {
 
   let chart = '```mermaid\n';
   chart += `pie showData\n`;
-  chart += `    title "文章分类分布"\n`;
+  chart += `    title "文章分類分布"\n`;
   for (const [cat, count] of sorted) {
     const meta = CATEGORY_META[cat];
     chart += `    "${meta.emoji} ${meta.label}" : ${count}\n`;
@@ -896,19 +954,19 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
   
-  let report = `# 📰 AI 博客每日精选 — ${dateStr}\n\n`;
-  report += `> 来自 Karpathy 推荐的 ${stats.totalFeeds} 个顶级技术博客，AI 精选 Top ${articles.length}\n\n`;
+  let report = `# 📰 AI 部落格每日精選 — ${dateStr}\n\n`;
+  report += `> 來自 Karpathy 推薦的 ${stats.totalFeeds} 個頂級技術部落格，AI 精選 Top ${articles.length}\n\n`;
 
   // ── Today's Highlights ──
   if (highlights) {
-    report += `## 📝 今日看点\n\n`;
+    report += `## 📝 今日看點\n\n`;
     report += `${highlights}\n\n`;
     report += `---\n\n`;
   }
 
   // ── Top 3 Deep Showcase ──
   if (articles.length >= 3) {
-    report += `## 🏆 今日必读\n\n`;
+    report += `## 🏆 今日必讀\n\n`;
     for (let i = 0; i < Math.min(3, articles.length); i++) {
       const a = articles[i];
       const medal = ['🥇', '🥈', '🥉'][i];
@@ -918,7 +976,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
       report += `[${a.title}](${a.link}) — ${a.sourceName} · ${humanizeTime(a.pubDate)} · ${catMeta.emoji} ${catMeta.label}\n\n`;
       report += `> ${a.summary}\n\n`;
       if (a.reason) {
-        report += `💡 **为什么值得读**: ${a.reason}\n\n`;
+        report += `💡 **為什麼值得讀**: ${a.reason}\n\n`;
       }
       if (a.keywords.length > 0) {
         report += `🏷️ ${a.keywords.join(', ')}\n\n`;
@@ -928,30 +986,30 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   }
 
   // ── Visual Statistics ──
-  report += `## 📊 数据概览\n\n`;
+  report += `## 📊 數據概覽\n\n`;
 
-  report += `| 扫描源 | 抓取文章 | 时间范围 | 精选 |\n`;
+  report += `| 掃描源 | 抓取文章 | 時間範圍 | 精選 |\n`;
   report += `|:---:|:---:|:---:|:---:|\n`;
   report += `| ${stats.successFeeds}/${stats.totalFeeds} | ${stats.totalArticles} 篇 → ${stats.filteredArticles} 篇 | ${stats.hours}h | **${articles.length} 篇** |\n\n`;
 
   const pieChart = generateCategoryPieChart(articles);
   if (pieChart) {
-    report += `### 分类分布\n\n${pieChart}\n`;
+    report += `### 分類分布\n\n${pieChart}\n`;
   }
 
   const barChart = generateKeywordBarChart(articles);
   if (barChart) {
-    report += `### 高频关键词\n\n${barChart}\n`;
+    report += `### 高頻關鍵詞\n\n${barChart}\n`;
   }
 
   const asciiChart = generateAsciiBarChart(articles);
   if (asciiChart) {
-    report += `<details>\n<summary>📈 纯文本关键词图（终端友好）</summary>\n\n${asciiChart}\n</details>\n\n`;
+    report += `<details>\n<summary>📈 純文字關鍵詞圖（終端友好）</summary>\n\n${asciiChart}\n</details>\n\n`;
   }
 
   const tagCloud = generateTagCloud(articles);
   if (tagCloud) {
-    report += `### 🏷️ 话题标签\n\n${tagCloud}\n\n`;
+    report += `### 🏷️ 話題標籤\n\n${tagCloud}\n\n`;
   }
 
   report += `---\n\n`;
@@ -987,8 +1045,8 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   }
 
   // ── Footer ──
-  report += `*生成于 ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | 扫描 ${stats.successFeeds} 源 → 获取 ${stats.totalArticles} 篇 → 精选 ${articles.length} 篇*\n`;
-  report += `*基于 [Hacker News Popularity Contest 2025](https://refactoringenglish.com/tools/hn-popularity/) RSS 源列表，由 [Andrej Karpathy](https://x.com/karpathy) 推荐*\n`;
+  report += `*產生於 ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | 掃描 ${stats.successFeeds} 源 → 取得 ${stats.totalArticles} 篇 → 精選 ${articles.length} 篇*\n`;
+  report += `*基於 [Hacker News Popularity Contest 2025](https://refactoringenglish.com/tools/hn-popularity/) RSS 源列表，由 [Andrej Karpathy](https://x.com/karpathy) 推薦*\n`;
   report += `*Powered by [ai-daily-digest](https://github.com/vigorX777/ai-daily-digest)*\n`;
 
   return report;
@@ -1013,10 +1071,13 @@ Options:
   --help          Show this help
 
 Environment:
-  GEMINI_API_KEY   Optional but recommended. Get one at https://aistudio.google.com/apikey
+  ANTHROPIC_API_KEY Anthropic Claude API key (highest priority)
+  GEMINI_API_KEY   Gemini API key. Get one at https://aistudio.google.com/apikey
   OPENAI_API_KEY   Optional fallback key for OpenAI-compatible APIs
   OPENAI_API_BASE  Optional fallback base URL (default: https://api.openai.com/v1)
   OPENAI_MODEL     Optional fallback model (default: deepseek-chat for DeepSeek base, else gpt-4o-mini)
+
+  API keys can also be set in ~/.hn-daily-digest/config.json (env vars take priority).
 
 Examples:
   bun scripts/digest.ts --hours 24 --top-n 10 --lang zh
@@ -1051,18 +1112,45 @@ async function main(): Promise<void> {
     }
   }
   
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  const openaiApiBase = process.env.OPENAI_API_BASE;
-  const openaiModel = process.env.OPENAI_MODEL;
+  // ── Load config.json ──
+  const CONFIG_PATH = `${homedir()}/.hn-daily-digest/config.json`;
 
-  if (!geminiApiKey && !openaiApiKey) {
-    console.error('[digest] Error: Missing API key. Set GEMINI_API_KEY and/or OPENAI_API_KEY.');
+  interface DigestConfig {
+    anthropicApiKey?: string;
+    geminiApiKey?: string;
+    openaiApiKey?: string;
+    openaiApiBase?: string;
+    openaiModel?: string;
+    timeRange?: number;
+    topN?: number;
+    language?: string;
+    lastUsed?: string;
+  }
+
+  let savedConfig: DigestConfig = {};
+  try {
+    const raw = await readFile(CONFIG_PATH, 'utf-8');
+    savedConfig = JSON.parse(raw) as DigestConfig;
+    console.log(`[digest] Loaded config from ${CONFIG_PATH}`);
+  } catch {
+    // config doesn't exist or unreadable, continue with env vars
+  }
+
+  // env vars take priority over config.json
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY || savedConfig.anthropicApiKey || '';
+  const geminiApiKey = process.env.GEMINI_API_KEY || savedConfig.geminiApiKey || '';
+  const openaiApiKey = process.env.OPENAI_API_KEY || savedConfig.openaiApiKey || '';
+  const openaiApiBase = process.env.OPENAI_API_BASE || savedConfig.openaiApiBase || '';
+  const openaiModel = process.env.OPENAI_MODEL || savedConfig.openaiModel || '';
+
+  if (!anthropicApiKey && !geminiApiKey && !openaiApiKey) {
+    console.error('[digest] Error: Missing API key. Set ANTHROPIC_API_KEY, GEMINI_API_KEY, and/or OPENAI_API_KEY.');
     console.error('[digest] Gemini key: https://aistudio.google.com/apikey');
     process.exit(1);
   }
 
   const aiClient = createAIClient({
+    anthropicApiKey,
     geminiApiKey,
     openaiApiKey,
     openaiApiBase,
@@ -1079,7 +1167,7 @@ async function main(): Promise<void> {
   console.log(`[digest] Top N: ${topN}`);
   console.log(`[digest] Language: ${lang}`);
   console.log(`[digest] Output: ${outputPath}`);
-  console.log(`[digest] AI provider: ${geminiApiKey ? 'Gemini (primary)' : 'OpenAI-compatible (primary)'}`);
+  console.log(`[digest] AI provider: ${anthropicApiKey ? 'Anthropic (primary)' : geminiApiKey ? 'Gemini (primary)' : 'OpenAI-compatible (primary)'}`);
   if (openaiApiKey) {
     const resolvedBase = (openaiApiBase?.trim() || OPENAI_DEFAULT_API_BASE).replace(/\/+$/, '');
     const resolvedModel = openaiModel?.trim() || inferOpenAIModel(resolvedBase);
