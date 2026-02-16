@@ -176,7 +176,7 @@ interface AIClient {
 // RSS/Atom Parsing (using Bun's built-in HTMLRewriter or manual XML parsing)
 // ============================================================================
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return html
     .replace(/<[^>]*>/g, '')
     .replace(/&amp;/g, '&')
@@ -189,12 +189,12 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-function extractCDATA(text: string): string {
+export function extractCDATA(text: string): string {
   const cdataMatch = text.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
   return cdataMatch ? cdataMatch[1] : text;
 }
 
-function getTagContent(xml: string, tagName: string): string {
+export function getTagContent(xml: string, tagName: string): string {
   // Handle namespaced and non-namespaced tags
   const patterns = [
     new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i'),
@@ -210,13 +210,13 @@ function getTagContent(xml: string, tagName: string): string {
   return '';
 }
 
-function getAttrValue(xml: string, tagName: string, attrName: string): string {
+export function getAttrValue(xml: string, tagName: string, attrName: string): string {
   const pattern = new RegExp(`<${tagName}[^>]*\\s${attrName}=["']([^"']*)["'][^>]*/?>`, 'i');
   const match = xml.match(pattern);
   return match?.[1] || '';
 }
 
-function parseDate(dateStr: string): Date | null {
+export function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null;
   
   const d = new Date(dateStr);
@@ -233,7 +233,7 @@ function parseDate(dateStr: string): Date | null {
   return null;
 }
 
-function parseRSSItems(xml: string): Array<{ title: string; link: string; pubDate: string; description: string }> {
+export function parseRSSItems(xml: string): Array<{ title: string; link: string; pubDate: string; description: string }> {
   const items: Array<{ title: string; link: string; pubDate: string; description: string }> = [];
   
   // Detect format: Atom vs RSS
@@ -1007,6 +1007,7 @@ Usage:
 Options:
   --hours <n>     Time range in hours (default: 48)
   --top-n <n>     Number of top articles to include (default: 15)
+  --feeds <n>     Limit number of RSS feeds to fetch (default: all 90)
   --lang <lang>   Summary language: zh or en (default: zh)
   --output <path> Output file path (default: ./digest-YYYYMMDD.md)
   --help          Show this help
@@ -1019,6 +1020,7 @@ Environment:
 
 Examples:
   bun scripts/digest.ts --hours 24 --top-n 10 --lang zh
+  bun scripts/digest.ts --feeds 3 --hours 72 --top-n 3
   bun scripts/digest.ts --hours 72 --top-n 20 --lang en --output ./my-digest.md
 `);
   process.exit(0);
@@ -1030,15 +1032,18 @@ async function main(): Promise<void> {
   
   let hours = 48;
   let topN = 15;
+  let feedLimit = 0;
   let lang: 'zh' | 'en' = 'zh';
   let outputPath = '';
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--hours' && args[i + 1]) {
       hours = parseInt(args[++i]!, 10);
     } else if (arg === '--top-n' && args[i + 1]) {
       topN = parseInt(args[++i]!, 10);
+    } else if (arg === '--feeds' && args[i + 1]) {
+      feedLimit = parseInt(args[++i]!, 10);
     } else if (arg === '--lang' && args[i + 1]) {
       lang = args[++i] as 'zh' | 'en';
     } else if (arg === '--output' && args[i + 1]) {
@@ -1082,8 +1087,12 @@ async function main(): Promise<void> {
   }
   console.log('');
   
-  console.log(`[digest] Step 1/5: Fetching ${RSS_FEEDS.length} RSS feeds...`);
-  const allArticles = await fetchAllFeeds(RSS_FEEDS);
+  const feeds = feedLimit > 0 ? RSS_FEEDS.slice(0, feedLimit) : RSS_FEEDS;
+  if (feedLimit > 0) {
+    console.log(`[digest] Feed limit: ${feedLimit} (of ${RSS_FEEDS.length} total)`);
+  }
+  console.log(`[digest] Step 1/5: Fetching ${feeds.length} RSS feeds...`);
+  const allArticles = await fetchAllFeeds(feeds);
   
   if (allArticles.length === 0) {
     console.error('[digest] Error: No articles fetched from any feed. Check network connection.');
@@ -1152,7 +1161,7 @@ async function main(): Promise<void> {
   const successfulSources = new Set(allArticles.map(a => a.sourceName));
   
   const report = generateDigestReport(finalArticles, highlights, {
-    totalFeeds: RSS_FEEDS.length,
+    totalFeeds: feeds.length,
     successFeeds: successfulSources.size,
     totalArticles: allArticles.length,
     filteredArticles: recentArticles.length,
@@ -1179,7 +1188,9 @@ async function main(): Promise<void> {
   }
 }
 
-await main().catch((err) => {
-  console.error(`[digest] Fatal error: ${err instanceof Error ? err.message : String(err)}`);
-  process.exit(1);
-});
+if (import.meta.main) {
+  await main().catch((err) => {
+    console.error(`[digest] Fatal error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  });
+}

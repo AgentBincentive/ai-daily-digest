@@ -158,6 +158,7 @@ chmod 600 ~/.hn-daily-digest/config.json
 | 10 篇 | `--top-n 10` |
 | 15 篇 | `--top-n 15` |
 | 20 篇 | `--top-n 20` |
+| 限制 RSS 來源數 | `--feeds <n>`（預設抓全部 90 個，測試時可用 `--feeds 3`） |
 | 中文 | `--lang zh` |
 | English | `--lang en` |
 
