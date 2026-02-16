@@ -1,0 +1,68 @@
+{
+  "id": "quant",
+  "name": "量化金融每日精選",
+  "description": "量化金融、演算法交易、風險管理領域的每日精選摘要",
+
+  "feeds": [
+    { "name": "Quantocracy", "xmlUrl": "https://quantocracy.com/feed/", "htmlUrl": "https://quantocracy.com" },
+    { "name": "QuantStart", "xmlUrl": "https://www.quantstart.com/articles/feed/", "htmlUrl": "https://www.quantstart.com" },
+    { "name": "Epchan (Ernie Chan)", "xmlUrl": "https://epchan.blogspot.com/feeds/posts/default", "htmlUrl": "https://epchan.blogspot.com" },
+    { "name": "Alpaca Markets", "xmlUrl": "https://alpaca.markets/blog/rss/", "htmlUrl": "https://alpaca.markets/blog" },
+    { "name": "Robot Wealth", "xmlUrl": "https://robotwealth.com/feed/", "htmlUrl": "https://robotwealth.com" },
+    { "name": "Flirting with Models", "xmlUrl": "https://blog.thinknewfound.com/feed/", "htmlUrl": "https://blog.thinknewfound.com" },
+    { "name": "Quantifiable Edges", "xmlUrl": "https://quantifiableedges.com/feed/", "htmlUrl": "https://quantifiableedges.com" },
+    { "name": "SSRN Quantitative Finance", "xmlUrl": "https://papers.ssrn.com/sol3/Jeljour_results.cfm?form_name=journalBrowse&journal_id=3302954&Network=no&lim=false&npage=1&SortOrder=ab_approval_date&stype=rss", "htmlUrl": "https://papers.ssrn.com" },
+    { "name": "Alpha Architect", "xmlUrl": "https://alphaarchitect.com/feed/", "htmlUrl": "https://alphaarchitect.com" },
+    { "name": "Philosophical Economics", "xmlUrl": "https://www.philosophicaleconomics.com/feed/", "htmlUrl": "https://www.philosophicaleconomics.com" },
+    { "name": "Kris Abdelmessih (moontower)", "xmlUrl": "https://moontowermeta.com/feed/", "htmlUrl": "https://moontowermeta.com" },
+    { "name": "Macro Ops", "xmlUrl": "https://macro-ops.com/feed/", "htmlUrl": "https://macro-ops.com" },
+    { "name": "Colby Davis (Verdad)", "xmlUrl": "https://verdadcap.com/feed", "htmlUrl": "https://verdadcap.com" },
+    { "name": "Matt Levine (Bloomberg)", "xmlUrl": "https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine.rss", "htmlUrl": "https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine" },
+    { "name": "Calculated Risk", "xmlUrl": "https://www.calculatedriskblog.com/feeds/posts/default", "htmlUrl": "https://www.calculatedriskblog.com" },
+    { "name": "The Financial Hacker", "xmlUrl": "https://financial-hacker.com/feed/", "htmlUrl": "https://financial-hacker.com" },
+    { "name": "Quantpedia", "xmlUrl": "https://quantpedia.com/feed/", "htmlUrl": "https://quantpedia.com" },
+    { "name": "Patrick Boyle", "xmlUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCASM3CGMneVQ4tPXSU4VmOw", "htmlUrl": "https://www.youtube.com/@PBoyle" },
+    { "name": "AQR Insights", "xmlUrl": "https://www.aqr.com/Insights/RSS", "htmlUrl": "https://www.aqr.com/Insights" },
+    { "name": "Cliff Asness (AQR)", "xmlUrl": "https://www.aqr.com/Insights/Perspectives/RSS", "htmlUrl": "https://www.aqr.com/Insights/Perspectives" }
+  ],
+
+  "categories": {
+    "alpha-research":          { "emoji": "\ud83d\udcc8", "label": "Alpha \u7814\u7a76" },
+    "market-microstructure":   { "emoji": "\ud83c\udfdb\ufe0f", "label": "\u5e02\u5834\u5fae\u7d50\u69cb" },
+    "risk-management":         { "emoji": "\ud83d\udee1\ufe0f", "label": "\u98a8\u63a7" },
+    "quant-tools":             { "emoji": "\ud83d\udee0", "label": "\u91cf\u5316\u5de5\u5177" },
+    "macro-commentary":        { "emoji": "\ud83c\udf0d", "label": "\u7e3d\u7d93\u8a55\u8ad6" },
+    "other":                   { "emoji": "\ud83d\udcdd", "label": "\u5176\u4ed6" }
+  },
+
+  "prompts": {
+    "curatorRole": "\u4f60\u662f\u4e00\u500b\u91cf\u5316\u91d1\u878d\u5167\u5bb9\u7b56\u5c55\u4eba\uff0c\u6b63\u5728\u70ba\u4e00\u4efd\u9762\u5411\u91cf\u5316\u5f9e\u696d\u8005\u7684\u6bcf\u65e5\u7cbe\u9078\u6458\u8981\u7be9\u9078\u6587\u7ae0\u3002",
+    "audience": "\u5c0d\u91cf\u5316\u4ea4\u6613/\u98a8\u63a7/\u91d1\u878d\u5de5\u7a0b\u5f9e\u696d\u8005\u7684\u50f9\u503c",
+    "relevanceRubric": {
+      "score10": "\u6240\u6709\u91cf\u5316\u5f9e\u696d\u8005\u90fd\u61c9\u8a72\u77e5\u9053\u7684\u91cd\u5927\u4e8b\u4ef6/\u7a81\u7834",
+      "score7to9": "\u5c0d\u5927\u90e8\u5206\u91cf\u5316\u5f9e\u696d\u8005\u6709\u50f9\u503c",
+      "score4to6": "\u5c0d\u7279\u5b9a\u91cf\u5316\u5b50\u9818\u57df\u6709\u50f9\u503c",
+      "score1to3": "\u8207\u91cf\u5316\u91d1\u878d\u95dc\u806f\u4e0d\u5927"
+    },
+    "categoryDescriptions": {
+      "alpha-research": "Alpha \u7b56\u7565\u7814\u7a76\u3001\u56e0\u5b50\u6a21\u578b\u3001\u56de\u6e2c\u5206\u6790\u3001\u7d71\u8a08\u5957\u5229",
+      "market-microstructure": "\u5e02\u5834\u5fae\u7d50\u69cb\u3001\u8a02\u55ae\u7c3f\u52d5\u614b\u3001\u57f7\u884c\u7b56\u7565\u3001\u6ed1\u9ede\u5206\u6790",
+      "risk-management": "\u98a8\u63a7\u6a21\u578b\u3001VaR\u3001\u6ce2\u52d5\u7387\u3001\u5c3e\u90e8\u98a8\u96aa\u3001\u90e8\u4f4d\u7ba1\u7406",
+      "quant-tools": "\u91cf\u5316\u958b\u767c\u5de5\u5177\u3001\u56de\u6e2c\u6846\u67b6\u3001\u6578\u64da\u6e90\u3001Python/R \u5eab",
+      "macro-commentary": "\u7e3d\u7d93\u5206\u6790\u3001\u592e\u884c\u653f\u7b56\u3001\u5229\u7387\u3001\u5e02\u5834\u5c55\u671b",
+      "other": "\u4ee5\u4e0a\u90fd\u4e0d\u592a\u9069\u5408\u7684"
+    },
+    "keywordInstruction": "\u7528\u82f1\u6587\uff0c\u7c21\u77ed\uff0c\u5982 \"alpha\", \"momentum\", \"VaR\", \"backtest\", \"options\"",
+    "summaryRole": "\u4f60\u662f\u4e00\u500b\u91cf\u5316\u91d1\u878d\u5167\u5bb9\u6458\u8981\u5c08\u5bb6\u3002",
+    "summaryDomainHint": "\u91d1\u878d\u8853\u8a9e\u3001\u6578\u64da\u3001\u7b56\u7565\u540d\u7a31\u6216\u89c0\u9ede",
+    "highlightsDomain": "\u91cf\u5316\u91d1\u878d\u5708"
+  },
+
+  "report": {
+    "title": "# \ud83d\udcc8 \u91cf\u5316\u91d1\u878d\u6bcf\u65e5\u7cbe\u9078",
+    "subtitle": "> \u4f86\u81ea {totalFeeds} \u500b\u91cf\u5316\u91d1\u878d\u90e8\u843d\u683c\uff0cAI \u7cbe\u9078 Top {topN}",
+    "footerLines": [
+      "*Powered by [ai-daily-digest](https://github.com/vigorX777/ai-daily-digest)*"
+    ]
+  }
+}

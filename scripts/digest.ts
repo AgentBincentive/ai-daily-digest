@@ -1,4 +1,4 @@
-import { writeFile, mkdir, readFile } from 'node:fs/promises';
+import { writeFile, mkdir, readFile, readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { homedir } from 'node:os';
 import process from 'node:process';
@@ -15,116 +15,72 @@ const FEED_CONCURRENCY = 10;
 const GEMINI_BATCH_SIZE = 10;
 const MAX_CONCURRENT_GEMINI = 2;
 
-// 90 RSS feeds from Hacker News Popularity Contest 2025 (curated by Karpathy)
-const RSS_FEEDS: Array<{ name: string; xmlUrl: string; htmlUrl: string }> = [
-  { name: "simonwillison.net", xmlUrl: "https://simonwillison.net/atom/everything/", htmlUrl: "https://simonwillison.net" },
-  { name: "jeffgeerling.com", xmlUrl: "https://www.jeffgeerling.com/blog.xml", htmlUrl: "https://jeffgeerling.com" },
-  { name: "seangoedecke.com", xmlUrl: "https://www.seangoedecke.com/rss.xml", htmlUrl: "https://seangoedecke.com" },
-  { name: "krebsonsecurity.com", xmlUrl: "https://krebsonsecurity.com/feed/", htmlUrl: "https://krebsonsecurity.com" },
-  { name: "daringfireball.net", xmlUrl: "https://daringfireball.net/feeds/main", htmlUrl: "https://daringfireball.net" },
-  { name: "ericmigi.com", xmlUrl: "https://ericmigi.com/rss.xml", htmlUrl: "https://ericmigi.com" },
-  { name: "antirez.com", xmlUrl: "http://antirez.com/rss", htmlUrl: "http://antirez.com" },
-  { name: "idiallo.com", xmlUrl: "https://idiallo.com/feed.rss", htmlUrl: "https://idiallo.com" },
-  { name: "maurycyz.com", xmlUrl: "https://maurycyz.com/index.xml", htmlUrl: "https://maurycyz.com" },
-  { name: "pluralistic.net", xmlUrl: "https://pluralistic.net/feed/", htmlUrl: "https://pluralistic.net" },
-  { name: "shkspr.mobi", xmlUrl: "https://shkspr.mobi/blog/feed/", htmlUrl: "https://shkspr.mobi" },
-  { name: "lcamtuf.substack.com", xmlUrl: "https://lcamtuf.substack.com/feed", htmlUrl: "https://lcamtuf.substack.com" },
-  { name: "mitchellh.com", xmlUrl: "https://mitchellh.com/feed.xml", htmlUrl: "https://mitchellh.com" },
-  { name: "dynomight.net", xmlUrl: "https://dynomight.net/feed.xml", htmlUrl: "https://dynomight.net" },
-  { name: "utcc.utoronto.ca/~cks", xmlUrl: "https://utcc.utoronto.ca/~cks/space/blog/?atom", htmlUrl: "https://utcc.utoronto.ca/~cks" },
-  { name: "xeiaso.net", xmlUrl: "https://xeiaso.net/blog.rss", htmlUrl: "https://xeiaso.net" },
-  { name: "devblogs.microsoft.com/oldnewthing", xmlUrl: "https://devblogs.microsoft.com/oldnewthing/feed", htmlUrl: "https://devblogs.microsoft.com/oldnewthing" },
-  { name: "righto.com", xmlUrl: "https://www.righto.com/feeds/posts/default", htmlUrl: "https://righto.com" },
-  { name: "lucumr.pocoo.org", xmlUrl: "https://lucumr.pocoo.org/feed.atom", htmlUrl: "https://lucumr.pocoo.org" },
-  { name: "skyfall.dev", xmlUrl: "https://skyfall.dev/rss.xml", htmlUrl: "https://skyfall.dev" },
-  { name: "garymarcus.substack.com", xmlUrl: "https://garymarcus.substack.com/feed", htmlUrl: "https://garymarcus.substack.com" },
-  { name: "rachelbythebay.com", xmlUrl: "https://rachelbythebay.com/w/atom.xml", htmlUrl: "https://rachelbythebay.com" },
-  { name: "overreacted.io", xmlUrl: "https://overreacted.io/rss.xml", htmlUrl: "https://overreacted.io" },
-  { name: "timsh.org", xmlUrl: "https://timsh.org/rss/", htmlUrl: "https://timsh.org" },
-  { name: "johndcook.com", xmlUrl: "https://www.johndcook.com/blog/feed/", htmlUrl: "https://johndcook.com" },
-  { name: "gilesthomas.com", xmlUrl: "https://gilesthomas.com/feed/rss.xml", htmlUrl: "https://gilesthomas.com" },
-  { name: "matklad.github.io", xmlUrl: "https://matklad.github.io/feed.xml", htmlUrl: "https://matklad.github.io" },
-  { name: "derekthompson.org", xmlUrl: "https://www.theatlantic.com/feed/author/derek-thompson/", htmlUrl: "https://derekthompson.org" },
-  { name: "evanhahn.com", xmlUrl: "https://evanhahn.com/feed.xml", htmlUrl: "https://evanhahn.com" },
-  { name: "terriblesoftware.org", xmlUrl: "https://terriblesoftware.org/feed/", htmlUrl: "https://terriblesoftware.org" },
-  { name: "rakhim.exotext.com", xmlUrl: "https://rakhim.exotext.com/rss.xml", htmlUrl: "https://rakhim.exotext.com" },
-  { name: "joanwestenberg.com", xmlUrl: "https://joanwestenberg.com/rss", htmlUrl: "https://joanwestenberg.com" },
-  { name: "xania.org", xmlUrl: "https://xania.org/feed", htmlUrl: "https://xania.org" },
-  { name: "micahflee.com", xmlUrl: "https://micahflee.com/feed/", htmlUrl: "https://micahflee.com" },
-  { name: "nesbitt.io", xmlUrl: "https://nesbitt.io/feed.xml", htmlUrl: "https://nesbitt.io" },
-  { name: "construction-physics.com", xmlUrl: "https://www.construction-physics.com/feed", htmlUrl: "https://construction-physics.com" },
-  { name: "tedium.co", xmlUrl: "https://feed.tedium.co/", htmlUrl: "https://tedium.co" },
-  { name: "susam.net", xmlUrl: "https://susam.net/feed.xml", htmlUrl: "https://susam.net" },
-  { name: "entropicthoughts.com", xmlUrl: "https://entropicthoughts.com/feed.xml", htmlUrl: "https://entropicthoughts.com" },
-  { name: "buttondown.com/hillelwayne", xmlUrl: "https://buttondown.com/hillelwayne/rss", htmlUrl: "https://buttondown.com/hillelwayne" },
-  { name: "dwarkesh.com", xmlUrl: "https://www.dwarkeshpatel.com/feed", htmlUrl: "https://dwarkesh.com" },
-  { name: "borretti.me", xmlUrl: "https://borretti.me/feed.xml", htmlUrl: "https://borretti.me" },
-  { name: "wheresyoured.at", xmlUrl: "https://www.wheresyoured.at/rss/", htmlUrl: "https://wheresyoured.at" },
-  { name: "jayd.ml", xmlUrl: "https://jayd.ml/feed.xml", htmlUrl: "https://jayd.ml" },
-  { name: "minimaxir.com", xmlUrl: "https://minimaxir.com/index.xml", htmlUrl: "https://minimaxir.com" },
-  { name: "geohot.github.io", xmlUrl: "https://geohot.github.io/blog/feed.xml", htmlUrl: "https://geohot.github.io" },
-  { name: "paulgraham.com", xmlUrl: "http://www.aaronsw.com/2002/feeds/pgessays.rss", htmlUrl: "https://paulgraham.com" },
-  { name: "filfre.net", xmlUrl: "https://www.filfre.net/feed/", htmlUrl: "https://filfre.net" },
-  { name: "blog.jim-nielsen.com", xmlUrl: "https://blog.jim-nielsen.com/feed.xml", htmlUrl: "https://blog.jim-nielsen.com" },
-  { name: "dfarq.homeip.net", xmlUrl: "https://dfarq.homeip.net/feed/", htmlUrl: "https://dfarq.homeip.net" },
-  { name: "jyn.dev", xmlUrl: "https://jyn.dev/atom.xml", htmlUrl: "https://jyn.dev" },
-  { name: "geoffreylitt.com", xmlUrl: "https://www.geoffreylitt.com/feed.xml", htmlUrl: "https://geoffreylitt.com" },
-  { name: "downtowndougbrown.com", xmlUrl: "https://www.downtowndougbrown.com/feed/", htmlUrl: "https://downtowndougbrown.com" },
-  { name: "brutecat.com", xmlUrl: "https://brutecat.com/rss.xml", htmlUrl: "https://brutecat.com" },
-  { name: "eli.thegreenplace.net", xmlUrl: "https://eli.thegreenplace.net/feeds/all.atom.xml", htmlUrl: "https://eli.thegreenplace.net" },
-  { name: "abortretry.fail", xmlUrl: "https://www.abortretry.fail/feed", htmlUrl: "https://abortretry.fail" },
-  { name: "fabiensanglard.net", xmlUrl: "https://fabiensanglard.net/rss.xml", htmlUrl: "https://fabiensanglard.net" },
-  { name: "oldvcr.blogspot.com", xmlUrl: "https://oldvcr.blogspot.com/feeds/posts/default", htmlUrl: "https://oldvcr.blogspot.com" },
-  { name: "bogdanthegeek.github.io", xmlUrl: "https://bogdanthegeek.github.io/blog/index.xml", htmlUrl: "https://bogdanthegeek.github.io" },
-  { name: "hugotunius.se", xmlUrl: "https://hugotunius.se/feed.xml", htmlUrl: "https://hugotunius.se" },
-  { name: "gwern.net", xmlUrl: "https://gwern.substack.com/feed", htmlUrl: "https://gwern.net" },
-  { name: "berthub.eu", xmlUrl: "https://berthub.eu/articles/index.xml", htmlUrl: "https://berthub.eu" },
-  { name: "chadnauseam.com", xmlUrl: "https://chadnauseam.com/rss.xml", htmlUrl: "https://chadnauseam.com" },
-  { name: "simone.org", xmlUrl: "https://simone.org/feed/", htmlUrl: "https://simone.org" },
-  { name: "it-notes.dragas.net", xmlUrl: "https://it-notes.dragas.net/feed/", htmlUrl: "https://it-notes.dragas.net" },
-  { name: "beej.us", xmlUrl: "https://beej.us/blog/rss.xml", htmlUrl: "https://beej.us" },
-  { name: "hey.paris", xmlUrl: "https://hey.paris/index.xml", htmlUrl: "https://hey.paris" },
-  { name: "danielwirtz.com", xmlUrl: "https://danielwirtz.com/rss.xml", htmlUrl: "https://danielwirtz.com" },
-  { name: "matduggan.com", xmlUrl: "https://matduggan.com/rss/", htmlUrl: "https://matduggan.com" },
-  { name: "refactoringenglish.com", xmlUrl: "https://refactoringenglish.com/index.xml", htmlUrl: "https://refactoringenglish.com" },
-  { name: "worksonmymachine.substack.com", xmlUrl: "https://worksonmymachine.substack.com/feed", htmlUrl: "https://worksonmymachine.substack.com" },
-  { name: "philiplaine.com", xmlUrl: "https://philiplaine.com/index.xml", htmlUrl: "https://philiplaine.com" },
-  { name: "steveblank.com", xmlUrl: "https://steveblank.com/feed/", htmlUrl: "https://steveblank.com" },
-  { name: "bernsteinbear.com", xmlUrl: "https://bernsteinbear.com/feed.xml", htmlUrl: "https://bernsteinbear.com" },
-  { name: "danieldelaney.net", xmlUrl: "https://danieldelaney.net/feed", htmlUrl: "https://danieldelaney.net" },
-  { name: "troyhunt.com", xmlUrl: "https://www.troyhunt.com/rss/", htmlUrl: "https://troyhunt.com" },
-  { name: "herman.bearblog.dev", xmlUrl: "https://herman.bearblog.dev/feed/", htmlUrl: "https://herman.bearblog.dev" },
-  { name: "tomrenner.com", xmlUrl: "https://tomrenner.com/index.xml", htmlUrl: "https://tomrenner.com" },
-  { name: "blog.pixelmelt.dev", xmlUrl: "https://blog.pixelmelt.dev/rss/", htmlUrl: "https://blog.pixelmelt.dev" },
-  { name: "martinalderson.com", xmlUrl: "https://martinalderson.com/feed.xml", htmlUrl: "https://martinalderson.com" },
-  { name: "danielchasehooper.com", xmlUrl: "https://danielchasehooper.com/feed.xml", htmlUrl: "https://danielchasehooper.com" },
-  { name: "chiark.greenend.org.uk/~sgtatham", xmlUrl: "https://www.chiark.greenend.org.uk/~sgtatham/quasiblog/feed.xml", htmlUrl: "https://chiark.greenend.org.uk/~sgtatham" },
-  { name: "grantslatton.com", xmlUrl: "https://grantslatton.com/rss.xml", htmlUrl: "https://grantslatton.com" },
-  { name: "experimental-history.com", xmlUrl: "https://www.experimental-history.com/feed", htmlUrl: "https://experimental-history.com" },
-  { name: "anildash.com", xmlUrl: "https://anildash.com/feed.xml", htmlUrl: "https://anildash.com" },
-  { name: "aresluna.org", xmlUrl: "https://aresluna.org/main.rss", htmlUrl: "https://aresluna.org" },
-  { name: "michael.stapelberg.ch", xmlUrl: "https://michael.stapelberg.ch/feed.xml", htmlUrl: "https://michael.stapelberg.ch" },
-  { name: "miguelgrinberg.com", xmlUrl: "https://blog.miguelgrinberg.com/feed", htmlUrl: "https://miguelgrinberg.com" },
-  { name: "keygen.sh", xmlUrl: "https://keygen.sh/blog/feed.xml", htmlUrl: "https://keygen.sh" },
-  { name: "mjg59.dreamwidth.org", xmlUrl: "https://mjg59.dreamwidth.org/data/rss", htmlUrl: "https://mjg59.dreamwidth.org" },
-  { name: "computer.rip", xmlUrl: "https://computer.rip/rss.xml", htmlUrl: "https://computer.rip" },
-  { name: "tedunangst.com", xmlUrl: "https://www.tedunangst.com/flak/rss", htmlUrl: "https://tedunangst.com" },
-];
+// ============================================================================
+// Domain Profile
+// ============================================================================
+
+export interface DomainProfile {
+  id: string;
+  name: string;
+  description: string;
+
+  feeds: Array<{ name: string; xmlUrl: string; htmlUrl: string }>;
+
+  categories: Record<string, { emoji: string; label: string }>;
+
+  prompts: {
+    curatorRole: string;
+    audience: string;
+    relevanceRubric: {
+      score10: string;
+      score7to9: string;
+      score4to6: string;
+      score1to3: string;
+    };
+    categoryDescriptions: Record<string, string>;
+    keywordInstruction: string;
+    summaryRole: string;
+    summaryDomainHint: string;
+    highlightsDomain: string;
+  };
+
+  report: {
+    title: string;
+    subtitle: string;
+    footerLines: string[];
+  };
+}
+
+export async function loadProfile(profileName: string): Promise<DomainProfile> {
+  const scriptDir = dirname(new URL(import.meta.url).pathname);
+  const profilePath = `${scriptDir}/../profiles/${profileName}.json`;
+  try {
+    const raw = await readFile(profilePath, 'utf-8');
+    return JSON.parse(raw) as DomainProfile;
+  } catch (error) {
+    const available = await listProfiles();
+    throw new Error(
+      `Profile "${profileName}" not found at ${profilePath}.\nAvailable profiles: ${available.join(', ') || 'none'}`
+    );
+  }
+}
+
+export async function listProfiles(): Promise<string[]> {
+  const scriptDir = dirname(new URL(import.meta.url).pathname);
+  const profilesDir = `${scriptDir}/../profiles`;
+  try {
+    const files = await readdir(profilesDir);
+    return files
+      .filter(f => f.endsWith('.json'))
+      .map(f => f.replace(/\.json$/, ''));
+  } catch {
+    return [];
+  }
+}
 
 // ============================================================================
 // Types
 // ============================================================================
-
-type CategoryId = 'ai-ml' | 'security' | 'engineering' | 'tools' | 'opinion' | 'other';
-
-const CATEGORY_META: Record<CategoryId, { emoji: string; label: string }> = {
-  'ai-ml':       { emoji: '🤖', label: 'AI / ML' },
-  'security':    { emoji: '🔒', label: '安全' },
-  'engineering': { emoji: '⚙️', label: '工程' },
-  'tools':       { emoji: '🛠', label: '工具 / 開源' },
-  'opinion':     { emoji: '💡', label: '觀點 / 雜談' },
-  'other':       { emoji: '📝', label: '其他' },
-};
 
 interface Article {
   title: string;
@@ -142,7 +98,7 @@ interface ScoredArticle extends Article {
     quality: number;
     timeliness: number;
   };
-  category: CategoryId;
+  category: string;
   keywords: string[];
   titleZh: string;
   summary: string;
@@ -354,7 +310,7 @@ async function fetchFeed(feed: { name: string; xmlUrl: string; htmlUrl: string }
   }
 }
 
-async function fetchAllFeeds(feeds: typeof RSS_FEEDS): Promise<FetchAllResult> {
+async function fetchAllFeeds(feeds: Array<{ name: string; xmlUrl: string; htmlUrl: string }>): Promise<FetchAllResult> {
   const allArticles: Article[] = [];
   const allErrors: FeedError[] = [];
   let successCount = 0;
@@ -589,22 +545,30 @@ function parseJsonResponse<T>(text: string): T {
 // AI Scoring
 // ============================================================================
 
-function buildScoringPrompt(articles: Array<{ index: number; title: string; description: string; sourceName: string }>): string {
+export function buildScoringPrompt(
+  articles: Array<{ index: number; title: string; description: string; sourceName: string }>,
+  profile: DomainProfile
+): string {
   const articlesList = articles.map(a =>
     `Index ${a.index}: [${a.sourceName}] ${a.title}\n${a.description.slice(0, 300)}`
   ).join('\n\n---\n\n');
 
-  return `你是一個技術內容策展人，正在為一份面向技術愛好者的每日精選摘要篩選文章。
+  const p = profile.prompts;
+  const categoryList = Object.entries(profile.prompts.categoryDescriptions)
+    .map(([id, desc]) => `- ${id}: ${desc}`)
+    .join('\n');
+
+  return `${p.curatorRole}
 
 請對以下文章進行三個維度的評分（1-10 整數，10 分最高），並為每篇文章分配一個分類標籤和提取 2-4 個關鍵詞。
 
 ## 評分維度
 
-### 1. 相關性 (relevance) - 對技術/程式/AI/網路從業者的價值
-- 10: 所有技術人都應該知道的重大事件/突破
-- 7-9: 對大部分技術從業者有價值
-- 4-6: 對特定技術領域有價值
-- 1-3: 與技術行業關聯不大
+### 1. 相關性 (relevance) - ${p.audience}
+- 10: ${p.relevanceRubric.score10}
+- 7-9: ${p.relevanceRubric.score7to9}
+- 4-6: ${p.relevanceRubric.score4to6}
+- 1-3: ${p.relevanceRubric.score1to3}
 
 ### 2. 品質 (quality) - 文章本身的深度和寫作品質
 - 10: 深度分析，原創洞見，引用豐富
@@ -619,15 +583,10 @@ function buildScoringPrompt(articles: Array<{ index: number; title: string; desc
 - 1-3: 過時或無時效價值
 
 ## 分類標籤（必須從以下選一個）
-- ai-ml: AI、機器學習、LLM、深度學習相關
-- security: 安全、隱私、漏洞、加密相關
-- engineering: 軟體工程、架構、程式語言、系統設計
-- tools: 開發工具、開源專案、新發佈的函式庫/框架
-- opinion: 行業觀點、個人思考、職業發展、文化評論
-- other: 以上都不太適合的
+${categoryList}
 
 ## 關鍵詞提取
-提取 2-4 個最能代表文章主題的關鍵詞（用英文，簡短，如 "Rust", "LLM", "database", "performance"）
+提取 2-4 個最能代表文章主題的關鍵詞（${p.keywordInstruction}）
 
 ## 待評分文章
 
@@ -641,8 +600,8 @@ ${articlesList}
       "relevance": 8,
       "quality": 7,
       "timeliness": 9,
-      "category": "engineering",
-      "keywords": ["Rust", "compiler", "performance"]
+      "category": "${Object.keys(profile.categories)[0] || 'other'}",
+      "keywords": ["keyword1", "keyword2", "keyword3"]
     }
   ]
 }`;
@@ -650,9 +609,10 @@ ${articlesList}
 
 async function scoreArticlesWithAI(
   articles: Article[],
-  aiClient: AIClient
-): Promise<Map<number, { relevance: number; quality: number; timeliness: number; category: CategoryId; keywords: string[] }>> {
-  const allScores = new Map<number, { relevance: number; quality: number; timeliness: number; category: CategoryId; keywords: string[] }>();
+  aiClient: AIClient,
+  profile: DomainProfile
+): Promise<Map<number, { relevance: number; quality: number; timeliness: number; category: string; keywords: string[] }>> {
+  const allScores = new Map<number, { relevance: number; quality: number; timeliness: number; category: string; keywords: string[] }>();
   
   const indexed = articles.map((article, index) => ({
     index,
@@ -668,20 +628,20 @@ async function scoreArticlesWithAI(
   
   console.log(`[digest] AI scoring: ${articles.length} articles in ${batches.length} batches`);
   
-  const validCategories = new Set<string>(['ai-ml', 'security', 'engineering', 'tools', 'opinion', 'other']);
-  
+  const validCategories = new Set<string>(Object.keys(profile.categories));
+
   for (let i = 0; i < batches.length; i += MAX_CONCURRENT_GEMINI) {
     const batchGroup = batches.slice(i, i + MAX_CONCURRENT_GEMINI);
     const promises = batchGroup.map(async (batch) => {
       try {
-        const prompt = buildScoringPrompt(batch);
+        const prompt = buildScoringPrompt(batch, profile);
         const responseText = await aiClient.call(prompt);
         const parsed = parseJsonResponse<GeminiScoringResult>(responseText);
-        
+
         if (parsed.results && Array.isArray(parsed.results)) {
           for (const result of parsed.results) {
             const clamp = (v: number) => Math.min(10, Math.max(1, Math.round(v)));
-            const cat = (validCategories.has(result.category) ? result.category : 'other') as CategoryId;
+            const cat = validCategories.has(result.category) ? result.category : 'other';
             allScores.set(result.index, {
               relevance: clamp(result.relevance),
               quality: clamp(result.quality),
@@ -710,9 +670,10 @@ async function scoreArticlesWithAI(
 // AI Summarization
 // ============================================================================
 
-function buildSummaryPrompt(
+export function buildSummaryPrompt(
   articles: Array<{ index: number; title: string; description: string; sourceName: string; link: string }>,
-  lang: 'zh' | 'en'
+  lang: 'zh' | 'en',
+  profile: DomainProfile
 ): string {
   const articlesList = articles.map(a =>
     `Index ${a.index}: [${a.sourceName}] ${a.title}\nURL: ${a.link}\n${a.description.slice(0, 800)}`
@@ -722,7 +683,9 @@ function buildSummaryPrompt(
     ? '請用繁體中文撰寫摘要和推薦理由。如果原文是英文，請翻譯為繁體中文。標題翻譯也用繁體中文。'
     : 'Write summaries, reasons, and title translations in English.';
 
-  return `你是一個技術內容摘要專家。請為以下文章完成三件事：
+  const p = profile.prompts;
+
+  return `${p.summaryRole}請為以下文章完成三件事：
 
 1. **中文標題** (titleZh): 將英文標題翻譯成自然的繁體中文。如果原標題已經是中文則保持不變。
 2. **摘要** (summary): 4-6 句話的結構化摘要，讓讀者不點進原文也能了解核心內容。包含：
@@ -735,7 +698,7 @@ ${langInstruction}
 
 摘要要求：
 - 直接說重點，不要用「本文討論了...」、「這篇文章介紹了...」這種開頭
-- 包含具體的技術名詞、數據、方案名稱或觀點
+- 包含具體的${p.summaryDomainHint}
 - 保留關鍵數字和指標（如效能提升百分比、使用者數、版本號等）
 - 如果文章涉及對比或選型，要點出比較對象和結論
 - 目標：讀者花 30 秒讀完摘要，就能決定是否值得花 10 分鐘讀原文
@@ -760,7 +723,8 @@ ${articlesList}
 async function summarizeArticles(
   articles: Array<Article & { index: number }>,
   aiClient: AIClient,
-  lang: 'zh' | 'en'
+  lang: 'zh' | 'en',
+  profile: DomainProfile
 ): Promise<Map<number, { titleZh: string; summary: string; reason: string }>> {
   const summaries = new Map<number, { titleZh: string; summary: string; reason: string }>();
   
@@ -783,7 +747,7 @@ async function summarizeArticles(
     const batchGroup = batches.slice(i, i + MAX_CONCURRENT_GEMINI);
     const promises = batchGroup.map(async (batch) => {
       try {
-        const prompt = buildSummaryPrompt(batch, lang);
+        const prompt = buildSummaryPrompt(batch, lang, profile);
         const responseText = await aiClient.call(prompt);
         const parsed = parseJsonResponse<GeminiSummaryResult>(responseText);
         
@@ -818,17 +782,19 @@ async function summarizeArticles(
 async function generateHighlights(
   articles: ScoredArticle[],
   aiClient: AIClient,
-  lang: 'zh' | 'en'
+  lang: 'zh' | 'en',
+  profile: DomainProfile
 ): Promise<string> {
   const articleList = articles.slice(0, 10).map((a, i) =>
     `${i + 1}. [${a.category}] ${a.titleZh || a.title} — ${a.summary.slice(0, 100)}`
   ).join('\n');
 
   const langNote = lang === 'zh' ? '用繁體中文回答。' : 'Write in English.';
+  const domain = profile.prompts.highlightsDomain;
 
-  const prompt = `根據以下今日精選技術文章列表，寫一段 3-5 句話的「今日看點」總結。
+  const prompt = `根據以下今日精選文章列表，寫一段 3-5 句話的「今日看點」總結。
 要求：
-- 提煉出今天技術圈的 2-3 個主要趨勢或話題
+- 提煉出今天${domain}的 2-3 個主要趨勢或話題
 - 不要逐篇列舉，要做宏觀歸納
 - 風格簡潔有力，像新聞導語
 ${langNote}
@@ -893,8 +859,8 @@ function generateKeywordBarChart(articles: ScoredArticle[]): string {
   return chart;
 }
 
-function generateCategoryPieChart(articles: ScoredArticle[]): string {
-  const catCount = new Map<CategoryId, number>();
+function generateCategoryPieChart(articles: ScoredArticle[], categories: Record<string, { emoji: string; label: string }>): string {
+  const catCount = new Map<string, number>();
   for (const a of articles) {
     catCount.set(a.category, (catCount.get(a.category) || 0) + 1);
   }
@@ -907,7 +873,7 @@ function generateCategoryPieChart(articles: ScoredArticle[]): string {
   chart += `pie showData\n`;
   chart += `    title "文章分類分布"\n`;
   for (const [cat, count] of sorted) {
-    const meta = CATEGORY_META[cat];
+    const meta = categories[cat] || { emoji: '📝', label: cat };
     chart += `    "${meta.emoji} ${meta.label}" : ${count}\n`;
   }
   chart += '```\n';
@@ -976,12 +942,16 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   filteredArticles: number;
   hours: number;
   lang: string;
-}): string {
+}, profile: DomainProfile): string {
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
-  
-  let report = `# 📰 AI 部落格每日精選 — ${dateStr}\n\n`;
-  report += `> 來自 Karpathy 推薦的 ${stats.totalFeeds} 個頂級技術部落格，AI 精選 Top ${articles.length}\n\n`;
+
+  const subtitle = profile.report.subtitle
+    .replace('{totalFeeds}', String(stats.totalFeeds))
+    .replace('{topN}', String(articles.length));
+
+  let report = `${profile.report.title} — ${dateStr}\n\n`;
+  report += `${subtitle}\n\n`;
 
   // ── Today's Highlights ──
   if (highlights) {
@@ -996,8 +966,8 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
     for (let i = 0; i < Math.min(3, articles.length); i++) {
       const a = articles[i];
       const medal = ['🥇', '🥈', '🥉'][i];
-      const catMeta = CATEGORY_META[a.category];
-      
+      const catMeta = profile.categories[a.category] || { emoji: '📝', label: a.category };
+
       report += `${medal} **${a.titleZh || a.title}**\n\n`;
       report += `[${a.title}](${a.link}) — ${a.sourceName} · ${humanizeTime(a.pubDate)} · ${catMeta.emoji} ${catMeta.label}\n\n`;
       report += `> ${a.summary}\n\n`;
@@ -1018,7 +988,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   report += `|:---:|:---:|:---:|:---:|\n`;
   report += `| ${stats.successFeeds}/${stats.totalFeeds} | ${stats.totalArticles} 篇 → ${stats.filteredArticles} 篇 | ${stats.hours}h | **${articles.length} 篇** |\n\n`;
 
-  const pieChart = generateCategoryPieChart(articles);
+  const pieChart = generateCategoryPieChart(articles, profile.categories);
   if (pieChart) {
     report += `### 分類分布\n\n${pieChart}\n`;
   }
@@ -1041,7 +1011,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   report += `---\n\n`;
 
   // ── Category-Grouped Articles ──
-  const categoryGroups = new Map<CategoryId, ScoredArticle[]>();
+  const categoryGroups = new Map<string, ScoredArticle[]>();
   for (const a of articles) {
     const list = categoryGroups.get(a.category) || [];
     list.push(a);
@@ -1053,7 +1023,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
 
   let globalIndex = 0;
   for (const [catId, catArticles] of sortedCategories) {
-    const catMeta = CATEGORY_META[catId];
+    const catMeta = profile.categories[catId] || { emoji: '📝', label: catId };
     report += `## ${catMeta.emoji} ${catMeta.label}\n\n`;
 
     for (const a of catArticles) {
@@ -1072,8 +1042,9 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
 
   // ── Footer ──
   report += `*產生於 ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | 掃描 ${stats.successFeeds} 源 → 取得 ${stats.totalArticles} 篇 → 精選 ${articles.length} 篇*\n`;
-  report += `*基於 [Hacker News Popularity Contest 2025](https://refactoringenglish.com/tools/hn-popularity/) RSS 源列表，由 [Andrej Karpathy](https://x.com/karpathy) 推薦*\n`;
-  report += `*Powered by [ai-daily-digest](https://github.com/vigorX777/ai-daily-digest)*\n`;
+  for (const line of profile.report.footerLines) {
+    report += `${line}\n`;
+  }
 
   return report;
 }
@@ -1137,19 +1108,20 @@ async function saveToHeptabase(reportPath: string): Promise<void> {
 // ============================================================================
 
 function printUsage(): never {
-  console.log(`AI Daily Digest - AI-powered RSS digest from 90 top tech blogs
+  console.log(`AI Daily Digest - AI-powered RSS digest with multi-domain profiles
 
 Usage:
   bun scripts/digest.ts [options]
 
 Options:
-  --hours <n>     Time range in hours (default: 48)
-  --top-n <n>     Number of top articles to include (default: 15)
-  --feeds <n>     Limit number of RSS feeds to fetch (default: all 90)
-  --lang <lang>   Summary language: zh or en (default: zh)
-  --output <path> Output file path (default: ./digest-YYYYMMDD.md)
-  --heptabase     Save digest to Heptabase as a note card (requires heptabase CLI)
-  --help          Show this help
+  --profile <name>  Domain profile to use (default: ai). Available: ai, quant
+  --hours <n>       Time range in hours (default: 48)
+  --top-n <n>       Number of top articles to include (default: 15)
+  --feeds <n>       Limit number of RSS feeds to fetch (default: all)
+  --lang <lang>     Summary language: zh or en (default: zh)
+  --output <path>   Output file path (default: ./digest-{profile}-YYYYMMDD.md)
+  --heptabase       Save digest to Heptabase as a note card (requires heptabase CLI)
+  --help            Show this help
 
 Environment:
   ANTHROPIC_API_KEY Anthropic Claude API key (highest priority)
@@ -1161,7 +1133,8 @@ Environment:
   API keys can also be set in ~/.hn-daily-digest/config.json (env vars take priority).
 
 Examples:
-  bun scripts/digest.ts --hours 24 --top-n 10 --lang zh
+  bun scripts/digest.ts --profile ai --hours 24 --top-n 10 --lang zh
+  bun scripts/digest.ts --profile quant --hours 72 --top-n 10
   bun scripts/digest.ts --feeds 3 --hours 72 --top-n 3
   bun scripts/digest.ts --hours 72 --top-n 20 --lang en --output ./my-digest.md
 `);
@@ -1172,6 +1145,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) printUsage();
   
+  let profileName = 'ai';
   let hours = 48;
   let topN = 15;
   let feedLimit = 0;
@@ -1181,7 +1155,9 @@ async function main(): Promise<void> {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
-    if (arg === '--hours' && args[i + 1]) {
+    if (arg === '--profile' && args[i + 1]) {
+      profileName = args[++i]!;
+    } else if (arg === '--hours' && args[i + 1]) {
       hours = parseInt(args[++i]!, 10);
     } else if (arg === '--top-n' && args[i + 1]) {
       topN = parseInt(args[++i]!, 10);
@@ -1195,6 +1171,9 @@ async function main(): Promise<void> {
       heptabaseEnabled = true;
     }
   }
+
+  // ── Load profile ──
+  const profile = await loadProfile(profileName);
   
   // ── Load config.json ──
   const CONFIG_PATH = `${homedir()}/.hn-daily-digest/config.json`;
@@ -1243,10 +1222,11 @@ async function main(): Promise<void> {
   
   if (!outputPath) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    outputPath = `./digest-${dateStr}.md`;
+    outputPath = `./digest-${profileName}-${dateStr}.md`;
   }
-  
-  console.log(`[digest] === AI Daily Digest ===`);
+
+  console.log(`[digest] === ${profile.name} ===`);
+  console.log(`[digest] Profile: ${profileName}`);
   console.log(`[digest] Time range: ${hours} hours`);
   console.log(`[digest] Top N: ${topN}`);
   console.log(`[digest] Language: ${lang}`);
@@ -1259,9 +1239,9 @@ async function main(): Promise<void> {
   }
   console.log('');
   
-  const feeds = feedLimit > 0 ? RSS_FEEDS.slice(0, feedLimit) : RSS_FEEDS;
+  const feeds = feedLimit > 0 ? profile.feeds.slice(0, feedLimit) : profile.feeds;
   if (feedLimit > 0) {
-    console.log(`[digest] Feed limit: ${feedLimit} (of ${RSS_FEEDS.length} total)`);
+    console.log(`[digest] Feed limit: ${feedLimit} (of ${profile.feeds.length} total)`);
   }
   console.log(`[digest] Step 1/5: Fetching ${feeds.length} RSS feeds...`);
   const { articles: allArticles, errors: feedErrors } = await fetchAllFeeds(feeds);
@@ -1284,10 +1264,10 @@ async function main(): Promise<void> {
   }
   
   console.log(`[digest] Step 3/5: AI scoring ${recentArticles.length} articles...`);
-  const scores = await scoreArticlesWithAI(recentArticles, aiClient);
+  const scores = await scoreArticlesWithAI(recentArticles, aiClient, profile);
   
   const scoredArticles = recentArticles.map((article, index) => {
-    const score = scores.get(index) || { relevance: 5, quality: 5, timeliness: 5, category: 'other' as CategoryId, keywords: [] };
+    const score = scores.get(index) || { relevance: 5, quality: 5, timeliness: 5, category: 'other', keywords: [] };
     return {
       ...article,
       totalScore: score.relevance + score.quality + score.timeliness,
@@ -1302,7 +1282,7 @@ async function main(): Promise<void> {
   
   console.log(`[digest] Step 4/5: Generating AI summaries...`);
   const indexedTopArticles = topArticles.map((a, i) => ({ ...a, index: i }));
-  const summaries = await summarizeArticles(indexedTopArticles, aiClient, lang);
+  const summaries = await summarizeArticles(indexedTopArticles, aiClient, lang, profile);
   
   const finalArticles: ScoredArticle[] = topArticles.map((a, i) => {
     const sm = summaries.get(i) || { titleZh: a.title, summary: a.description.slice(0, 200), reason: '' };
@@ -1328,7 +1308,7 @@ async function main(): Promise<void> {
   });
   
   console.log(`[digest] Step 5/5: Generating today's highlights...`);
-  const highlights = await generateHighlights(finalArticles, aiClient, lang);
+  const highlights = await generateHighlights(finalArticles, aiClient, lang, profile);
   
   const successfulSources = new Set(allArticles.map(a => a.sourceName));
   
@@ -1339,7 +1319,7 @@ async function main(): Promise<void> {
     filteredArticles: recentArticles.length,
     hours,
     lang,
-  });
+  }, profile);
   
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, report);
@@ -1347,7 +1327,7 @@ async function main(): Promise<void> {
   // ── Error log ──
   if (feedErrors.length > 0) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const errorLogPath = `${dirname(outputPath)}/digest-${dateStr}-errors.log`;
+    const errorLogPath = `${dirname(outputPath)}/digest-${profileName}-${dateStr}-errors.log`;
     const errorLogContent = feedErrors
       .map(e => `[${e.feedName}] ${e.feedUrl} — ${e.message}`)
       .join('\n');

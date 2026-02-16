@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { stripHtml, extractCDATA, getTagContent, getAttrValue, parseDate, parseRSSItems } from './digest';
+import { stripHtml, extractCDATA, getTagContent, getAttrValue, parseDate, parseRSSItems, loadProfile, listProfiles, buildScoringPrompt, buildSummaryPrompt } from './digest';
+import type { DomainProfile } from './digest';
 
 // ============================================================================
 // stripHtml
@@ -237,5 +238,206 @@ describe('parseRSSItems', () => {
 
     const items = parseRSSItems(xml);
     expect(items[0].description.length).toBeLessThanOrEqual(500);
+  });
+});
+
+// ============================================================================
+// Profile Loading
+// ============================================================================
+
+describe('loadProfile', () => {
+  test('loads ai profile successfully', async () => {
+    const profile = await loadProfile('ai');
+    expect(profile.id).toBe('ai');
+    expect(profile.name).toBe('AI 部落格每日精選');
+    expect(profile.feeds.length).toBeGreaterThan(0);
+    expect(profile.categories).toHaveProperty('ai-ml');
+    expect(profile.categories).toHaveProperty('other');
+    expect(profile.prompts.curatorRole).toContain('技術');
+    expect(profile.report.title).toContain('AI');
+  });
+
+  test('loads quant profile successfully', async () => {
+    const profile = await loadProfile('quant');
+    expect(profile.id).toBe('quant');
+    expect(profile.name).toBe('量化金融每日精選');
+    expect(profile.feeds.length).toBeGreaterThan(0);
+    expect(profile.categories).toHaveProperty('alpha-research');
+    expect(profile.categories).toHaveProperty('risk-management');
+    expect(profile.prompts.curatorRole).toContain('量化');
+    expect(profile.report.title).toContain('量化');
+  });
+
+  test('throws for non-existent profile', async () => {
+    await expect(loadProfile('nonexistent')).rejects.toThrow('Profile "nonexistent" not found');
+  });
+
+  test('profile has all required fields', async () => {
+    const profile = await loadProfile('ai');
+    // Check DomainProfile structure
+    expect(typeof profile.id).toBe('string');
+    expect(typeof profile.name).toBe('string');
+    expect(typeof profile.description).toBe('string');
+    expect(Array.isArray(profile.feeds)).toBe(true);
+    expect(typeof profile.categories).toBe('object');
+    expect(typeof profile.prompts).toBe('object');
+    expect(typeof profile.prompts.curatorRole).toBe('string');
+    expect(typeof profile.prompts.audience).toBe('string');
+    expect(typeof profile.prompts.relevanceRubric).toBe('object');
+    expect(typeof profile.prompts.categoryDescriptions).toBe('object');
+    expect(typeof profile.prompts.keywordInstruction).toBe('string');
+    expect(typeof profile.prompts.summaryRole).toBe('string');
+    expect(typeof profile.prompts.summaryDomainHint).toBe('string');
+    expect(typeof profile.prompts.highlightsDomain).toBe('string');
+    expect(typeof profile.report).toBe('object');
+    expect(typeof profile.report.title).toBe('string');
+    expect(typeof profile.report.subtitle).toBe('string');
+    expect(Array.isArray(profile.report.footerLines)).toBe(true);
+  });
+
+  test('feed entries have required fields', async () => {
+    const profile = await loadProfile('ai');
+    for (const feed of profile.feeds) {
+      expect(typeof feed.name).toBe('string');
+      expect(typeof feed.xmlUrl).toBe('string');
+      expect(typeof feed.htmlUrl).toBe('string');
+    }
+  });
+
+  test('category entries have emoji and label', async () => {
+    const profile = await loadProfile('quant');
+    for (const [, meta] of Object.entries(profile.categories)) {
+      expect(typeof meta.emoji).toBe('string');
+      expect(typeof meta.label).toBe('string');
+    }
+  });
+});
+
+describe('listProfiles', () => {
+  test('returns available profile names', async () => {
+    const profiles = await listProfiles();
+    expect(profiles).toContain('ai');
+    expect(profiles).toContain('quant');
+  });
+
+  test('returns array of strings', async () => {
+    const profiles = await listProfiles();
+    expect(Array.isArray(profiles)).toBe(true);
+    for (const name of profiles) {
+      expect(typeof name).toBe('string');
+    }
+  });
+});
+
+// ============================================================================
+// Parameterized Prompt Building
+// ============================================================================
+
+const mockProfile: DomainProfile = {
+  id: 'test',
+  name: 'Test Profile',
+  description: 'A test profile',
+  feeds: [],
+  categories: {
+    'cat-a': { emoji: '🅰️', label: 'Category A' },
+    'cat-b': { emoji: '🅱️', label: 'Category B' },
+    'other': { emoji: '📝', label: 'Other' },
+  },
+  prompts: {
+    curatorRole: 'You are a test curator.',
+    audience: 'test audience value',
+    relevanceRubric: {
+      score10: 'top score description',
+      score7to9: 'high score description',
+      score4to6: 'mid score description',
+      score1to3: 'low score description',
+    },
+    categoryDescriptions: {
+      'cat-a': 'Description for category A',
+      'cat-b': 'Description for category B',
+      'other': 'Everything else',
+    },
+    keywordInstruction: 'use test keywords like "foo", "bar"',
+    summaryRole: 'You are a test summary expert.',
+    summaryDomainHint: 'test-specific terms and data',
+    highlightsDomain: 'test domain',
+  },
+  report: {
+    title: '# Test Report',
+    subtitle: '> From {totalFeeds} sources, Top {topN}',
+    footerLines: ['*Test footer line*'],
+  },
+};
+
+describe('buildScoringPrompt with profile', () => {
+  const articles = [
+    { index: 0, title: 'Test Article', description: 'A test description', sourceName: 'test-source' },
+  ];
+
+  test('includes curatorRole from profile', () => {
+    const prompt = buildScoringPrompt(articles, mockProfile);
+    expect(prompt).toContain('You are a test curator.');
+  });
+
+  test('includes audience from profile', () => {
+    const prompt = buildScoringPrompt(articles, mockProfile);
+    expect(prompt).toContain('test audience value');
+  });
+
+  test('includes relevance rubric from profile', () => {
+    const prompt = buildScoringPrompt(articles, mockProfile);
+    expect(prompt).toContain('top score description');
+    expect(prompt).toContain('high score description');
+    expect(prompt).toContain('mid score description');
+    expect(prompt).toContain('low score description');
+  });
+
+  test('includes category descriptions from profile', () => {
+    const prompt = buildScoringPrompt(articles, mockProfile);
+    expect(prompt).toContain('cat-a: Description for category A');
+    expect(prompt).toContain('cat-b: Description for category B');
+  });
+
+  test('includes keyword instruction from profile', () => {
+    const prompt = buildScoringPrompt(articles, mockProfile);
+    expect(prompt).toContain('use test keywords like "foo", "bar"');
+  });
+
+  test('includes article data', () => {
+    const prompt = buildScoringPrompt(articles, mockProfile);
+    expect(prompt).toContain('Test Article');
+    expect(prompt).toContain('test-source');
+  });
+});
+
+describe('buildSummaryPrompt with profile', () => {
+  const articles = [
+    { index: 0, title: 'Test Article', description: 'A test description', sourceName: 'test-source', link: 'https://example.com' },
+  ];
+
+  test('includes summaryRole from profile', () => {
+    const prompt = buildSummaryPrompt(articles, 'zh', mockProfile);
+    expect(prompt).toContain('You are a test summary expert.');
+  });
+
+  test('includes summaryDomainHint from profile', () => {
+    const prompt = buildSummaryPrompt(articles, 'zh', mockProfile);
+    expect(prompt).toContain('test-specific terms and data');
+  });
+
+  test('respects lang=zh', () => {
+    const prompt = buildSummaryPrompt(articles, 'zh', mockProfile);
+    expect(prompt).toContain('繁體中文');
+  });
+
+  test('respects lang=en', () => {
+    const prompt = buildSummaryPrompt(articles, 'en', mockProfile);
+    expect(prompt).toContain('Write summaries');
+  });
+
+  test('includes article data', () => {
+    const prompt = buildSummaryPrompt(articles, 'zh', mockProfile);
+    expect(prompt).toContain('Test Article');
+    expect(prompt).toContain('https://example.com');
   });
 });

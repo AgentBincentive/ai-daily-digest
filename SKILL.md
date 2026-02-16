@@ -1,19 +1,27 @@
 ---
 name: digest
-description: "Fetches RSS feeds from 90 top Hacker News blogs (curated by Karpathy), uses AI to score and filter articles, and generates a daily digest in Markdown with Chinese-translated titles, category grouping, trend highlights, and visual statistics (Mermaid charts + tag cloud). Use when user mentions 'daily digest', 'RSS digest', 'blog digest', 'AI blogs', 'tech news summary', or asks to run /digest command. Trigger command: /digest."
+description: "Multi-domain AI-powered RSS digest. Supports multiple profiles (ai, quant, etc.) to fetch domain-specific RSS feeds, score/filter articles with AI, and generate daily digests in Markdown. Use when user mentions 'daily digest', 'RSS digest', 'blog digest', 'AI blogs', 'quant digest', 'tech news summary', or asks to run /digest command. Trigger command: /digest."
 ---
 
 # AI Daily Digest
 
-從 Karpathy 推薦的 90 個熱門技術部落格抓取最新文章，透過 AI 評分篩選，產生每日精選摘要。
+支援多領域的 AI 每日精選摘要產生器。透過 profile 機制，可切換不同領域（AI/技術、量化金融等），抓取對應 RSS 來源並以 AI 評分篩選。
 
 ## 指令
 
 ### `/digest`
 
-執行每日摘要產生器。
+執行每日摘要產生器（預設使用 AI/技術 profile）。
 
-**使用方式**：輸入 `/digest`，Agent 透過互動引導收集參數後執行。
+### `/digest ai`
+
+執行 AI/技術領域摘要（來自 Karpathy 推薦的 90 個頂級技術部落格）。
+
+### `/digest quant`
+
+執行量化金融領域摘要（量化交易、風控、市場微結構等）。
+
+**使用方式**：輸入 `/digest` 或 `/digest <profile>`，Agent 透過互動引導收集參數後執行。
 
 ---
 
@@ -21,9 +29,11 @@ description: "Fetches RSS feeds from 90 top Hacker News blogs (curated by Karpat
 
 **重要**：所有腳本位於 `~/.claude/skills/ai-daily-digest/scripts/`。
 
-| 腳本 | 用途 |
+| 檔案 | 用途 |
 |------|------|
 | `scripts/digest.ts` | 主腳本 — RSS 抓取、AI 評分、產生摘要 |
+| `profiles/ai.json` | AI/技術領域 profile |
+| `profiles/quant.json` | 量化金融領域 profile |
 
 ---
 
@@ -61,7 +71,7 @@ Agent 在執行前**必須檢查**此檔案是否存在：
 cat ~/.hn-daily-digest/config.json 2>/dev/null || echo "NO_CONFIG"
 ```
 
-若設定存在且有 `geminiApiKey`，詢問使用者：
+若設定存在且有 API Key，詢問使用者：
 
 > 偵測到上次使用的設定：
 > - 時間範圍：{timeRange} 小時
@@ -70,9 +80,17 @@ cat ~/.hn-daily-digest/config.json 2>/dev/null || echo "NO_CONFIG"
 >
 > 請問要使用上次設定直接執行，還是重新設定？
 
-### Step 1：收集參數
+### Step 1：選擇 Profile 和收集參數
 
-依序詢問使用者以下三個設定（若使用者選擇沿用上次設定則跳過）：
+若使用者輸入 `/digest` 未指定 profile，詢問：
+
+**領域 Profile** — 要產生哪個領域的摘要？
+- AI/技術（推薦，90 個技術部落格）→ `--profile ai`
+- 量化金融（20 個量化金融部落格）→ `--profile quant`
+
+若使用者輸入 `/digest ai` 或 `/digest quant`，則直接使用指定的 profile。
+
+依序詢問使用者以下設定（若使用者選擇沿用上次設定則跳過）：
 
 **時間範圍** — 抓取多長時間內的文章？
 - 24 小時（僅最近一天）
@@ -115,10 +133,11 @@ export OPENAI_API_BASE="https://api.deepseek.com/v1"
 export OPENAI_MODEL="deepseek-chat"
 
 npx -y bun ~/.claude/skills/ai-daily-digest/scripts/digest.ts \
+  --profile <ai|quant> \
   --hours <timeRange> \
   --top-n <topN> \
   --lang <zh|en> \
-  --output ./output/digest-$(date +%Y%m%d).md \
+  --output ./output/digest-<profile>-$(date +%Y%m%d).md \
   --heptabase  # 可選：自動存入 Heptabase card
 ```
 
@@ -148,14 +167,14 @@ chmod 600 ~/.hn-daily-digest/config.json
 - 報告檔案路徑
 - 簡要摘要：掃描源數、抓取文章數、精選文章數
 - **今日精選 Top 3 預覽**：中文標題 + 一句話摘要
-- **RSS 錯誤 log**：若有 feed 抓取失敗，會產生 `digest-YYYYMMDD-errors.log` 於 output 同目錄
+- **RSS 錯誤 log**：若有 feed 抓取失敗，會產生 `digest-{profile}-YYYYMMDD-errors.log` 於 output 同目錄
 - **Heptabase 儲存狀態**：若啟用 `--heptabase`，顯示是否成功存入 Heptabase card
 
 **報告結構**（產生的 Markdown 檔案包含以下區塊）：
 1. **今日看點** — AI 歸納的 3-5 句宏觀趨勢總結
 2. **今日必讀 Top 3** — 中英雙語標題、摘要、推薦理由、關鍵詞標籤
 3. **數據概覽** — 統計表格 + Mermaid 分類圓餅圖 + 高頻關鍵詞柱狀圖 + ASCII 純文字圖 + 話題標籤雲
-4. **分類文章列表** — 按 6 大分類（AI/ML、安全、工程、工具/開源、觀點/雜談、其他）分組展示
+4. **分類文章列表** — 按 profile 定義的分類分組展示
 
 **失敗時**：
 - 顯示錯誤訊息
@@ -167,6 +186,8 @@ chmod 600 ~/.hn-daily-digest/config.json
 
 | 互動選項 | 腳本參數 |
 |----------|----------|
+| AI/技術 | `--profile ai`（預設） |
+| 量化金融 | `--profile quant` |
 | 24 小時 | `--hours 24` |
 | 48 小時 | `--hours 48` |
 | 72 小時 | `--hours 72` |
@@ -174,7 +195,7 @@ chmod 600 ~/.hn-daily-digest/config.json
 | 10 篇 | `--top-n 10` |
 | 15 篇 | `--top-n 15` |
 | 20 篇 | `--top-n 20` |
-| 限制 RSS 來源數 | `--feeds <n>`（預設抓全部 90 個，測試時可用 `--feeds 3`） |
+| 限制 RSS 來源數 | `--feeds <n>`（預設抓全部，測試時可用 `--feeds 3`） |
 | 中文 | `--lang zh` |
 | English | `--lang en` |
 | 存入 Heptabase | `--heptabase`（需已安裝 heptabase CLI 並登入） |
@@ -193,17 +214,35 @@ chmod 600 ~/.hn-daily-digest/config.json
 
 ---
 
-## 資訊來源
+## 可用 Profiles
 
-90 個 RSS 來源取自 [Hacker News Popularity Contest 2025](https://refactoringenglish.com/tools/hn-popularity/)，由 [Andrej Karpathy](https://x.com/karpathy) 推薦。
+### `ai` — AI/技術（預設）
+90 個 RSS 來源取自 [Hacker News Popularity Contest 2025](https://refactoringenglish.com/tools/hn-popularity/)，由 [Andrej Karpathy](https://x.com/karpathy) 推薦。包括：simonwillison.net、paulgraham.com、overreacted.io、gwern.net、krebsonsecurity.com 等頂級技術部落格。
 
-包括：simonwillison.net、paulgraham.com、overreacted.io、gwern.net、krebsonsecurity.com、antirez.com、daringfireball.net 等頂級技術部落格。
+分類：AI/ML、安全、工程、工具/開源、觀點/雜談、其他
 
-完整列表內嵌於腳本中。
+### `quant` — 量化金融
+20 個量化金融相關 RSS 來源，涵蓋 Quantocracy、QuantStart、Alpha Architect、AQR Insights 等。
+
+分類：Alpha 研究、市場微結構、風控、量化工具、總經評論、其他
+
+---
+
+## 新增自訂 Profile
+
+在 `profiles/` 目錄下新增 `<name>.json`，結構參考 `profiles/ai.json`。主要欄位：
+
+- `feeds` — RSS 來源列表
+- `categories` — 分類定義（ID、emoji、label）
+- `prompts` — AI 評分和摘要的領域用語
+- `report` — 報告標題、副標題、footer
 
 ---
 
 ## 疑難排解
+
+### "Profile not found"
+確認 `profiles/<name>.json` 存在。執行 `--help` 可查看可用的 profiles。
 
 ### "Missing API key"
 需要至少一個 API Key。設定 `ANTHROPIC_API_KEY`（推薦）、`GEMINI_API_KEY`（免費）或 `OPENAI_API_KEY`。
