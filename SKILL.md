@@ -41,9 +41,9 @@ description: "Multi-domain AI-powered RSS digest. Supports multiple profiles (ai
 
 設定檔路徑：`~/.hn-daily-digest/config.json`
 
-Agent 在執行前**必須檢查**此檔案是否存在：
-1. 若存在且有 API Key，直接使用已儲存設定自動執行（不詢問、不重新儲存 config）
-2. 若不存在或無 API Key，走互動流程收集參數，完成後儲存 config 並 `chmod 600`
+Agent **不要用 Read 工具讀取此檔案**（會觸發專案外權限提示）。腳本會自行讀取 config。
+- 若 config 存在且有 API Key → 腳本自動使用，正常執行
+- 若 config 不存在或無 API Key → 腳本報錯，Agent 再進入互動流程收集參數
 
 **設定檔結構**：
 ```json
@@ -65,19 +65,16 @@ Agent 在執行前**必須檢查**此檔案是否存在：
 
 ## 互動流程
 
-### Step 0：檢查已儲存設定（自動執行模式）
+### Step 0：直接執行（零前置操作）
 
-用 Read 工具讀取 `~/.hn-daily-digest/config.json`。
+**不要用 Read 讀取 config**（會觸發專案外檔案的權限提示）。
 
-**■ 若 config 存在 且 至少有一個 API Key（`anthropicApiKey`、`geminiApiKey` 或 `openaiApiKey` 非空）→ 自動執行模式：**
+直接跳到 Step 2 執行 `npx` 指令。腳本會自行讀取 `~/.hn-daily-digest/config.json` 中的 API Key 和設定。
 
-- 顯示一行簡訊：`使用已儲存設定執行 digest（profile: {profile}, {timeRange}hr, {topN}篇, {language}）…`
-- 若使用者輸入 `/digest <profile>`（如 `/digest quant`），使用指定的 profile 覆蓋預設值；否則預設 `ai`
-- **不問任何問題**，直接跳到 Step 2 執行腳本
+- 若使用者輸入 `/digest <profile>`（如 `/digest quant`），使用指定的 profile；否則預設 `ai`
+- **不問任何問題**，不讀取任何檔案，直接執行腳本
 
-**■ 若 config 不存在 或 沒有任何 API Key → 互動模式：**
-
-走原本的互動流程（Step 1 ~ Step 1c），收集所有必要參數後再執行。
+**■ 若腳本報錯 "Missing API key" → 才進入互動模式**（Step 1 ~ Step 1c），收集 API Key 後重新執行。
 
 ### Step 1：選擇 Profile 和收集參數
 
