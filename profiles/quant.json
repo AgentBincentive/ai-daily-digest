@@ -18,9 +18,6 @@
     { "name": "Calculated Risk", "xmlUrl": "https://www.calculatedriskblog.com/feeds/posts/default", "htmlUrl": "https://www.calculatedriskblog.com" },
     { "name": "The Financial Hacker", "xmlUrl": "https://financial-hacker.com/feed/", "htmlUrl": "https://financial-hacker.com" },
     { "name": "Quantpedia", "xmlUrl": "https://quantpedia.com/feed/", "htmlUrl": "https://quantpedia.com" },
-    { "name": "AQR Insights", "xmlUrl": "https://www.aqr.com/Insights/RSS", "htmlUrl": "https://www.aqr.com/Insights" },
-    { "name": "Cliff Asness (AQR)", "xmlUrl": "https://www.aqr.com/Insights/Perspectives/RSS", "htmlUrl": "https://www.aqr.com/Insights/Perspectives" },
-    { "name": "綠角財經筆記", "xmlUrl": "https://greenhornfinancefootnote.blogspot.com/feeds/posts/default", "htmlUrl": "https://greenhornfinancefootnote.blogspot.com" },
     { "name": "FinLab 量化通", "xmlUrl": "https://www.finlab.tw/feed/", "htmlUrl": "https://www.finlab.tw" },
     { "name": "Hudson & Thames", "xmlUrl": "https://hudsonthames.org/feed/", "htmlUrl": "https://hudsonthames.org" }
   ],
