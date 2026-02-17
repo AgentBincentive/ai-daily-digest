@@ -57,6 +57,7 @@ Agent 在執行前**必須檢查**此檔案是否存在：
   "timeRange": 48,
   "topN": 15,
   "language": "zh",
+  "heptabase": true,
   "lastUsed": "2026-02-16T12:00:00Z"
 }
 ```
@@ -77,6 +78,7 @@ cat ~/.hn-daily-digest/config.json 2>/dev/null || echo "NO_CONFIG"
 > - 時間範圍：{timeRange} 小時
 > - 精選數量：{topN} 篇
 > - 輸出語言：{language === 'zh' ? '中文' : 'English'}
+> - Heptabase 輸出：{heptabase ? '啟用' : '停用'}
 >
 > 請問要使用上次設定直接執行，還是重新設定？
 
@@ -118,6 +120,14 @@ cat ~/.hn-daily-digest/config.json 2>/dev/null || echo "NO_CONFIG"
 
 若 `config.anthropicApiKey` 或 `config.geminiApiKey` 已存在，跳過此步。
 
+### Step 1c：Heptabase 輸出（預設啟用）
+
+告知使用者：
+
+> 摘要將自動存入 Heptabase card。若不需要，請告知跳過。
+
+若使用者明確要求跳過，則移除 `--heptabase` 參數。
+
 ### Step 2：執行腳本
 
 ```bash
@@ -138,7 +148,7 @@ npx -y bun ~/.claude/skills/digest/scripts/digest.ts \
   --top-n <topN> \
   --lang <zh|en> \
   --output ./output/digest-<profile>-$(date +%Y%m%d).md \
-  --heptabase  # 可選：自動存入 Heptabase card
+  --heptabase
 ```
 
 ### Step 2b：儲存設定
@@ -155,6 +165,7 @@ cat > ~/.hn-daily-digest/config.json << 'EOF'
   "timeRange": <hours>,
   "topN": <topN>,
   "language": "<zh|en>",
+  "heptabase": true,
   "lastUsed": "<ISO timestamp>"
 }
 EOF
