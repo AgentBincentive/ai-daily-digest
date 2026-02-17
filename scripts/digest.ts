@@ -386,14 +386,14 @@ async function callOpenAICompatible(
   model: string
 ): Promise<string> {
   const normalizedBase = apiBase.replace(/\/+$/, '');
-  // Models like gpt-5-mini, o1, o3 series don't support temperature
-  const supportsTemperature = !/^(o[0-9]|gpt-5)/.test(model);
+  // Models like gpt-5-mini, o1, o3 series don't support temperature or max_tokens
+  const isNewModel = /^(o[0-9]|gpt-5)/.test(model);
   const body: Record<string, unknown> = {
     model,
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: 16384,
+    [isNewModel ? 'max_completion_tokens' : 'max_tokens']: 16384,
   };
-  if (supportsTemperature) {
+  if (!isNewModel) {
     body.temperature = 0.3;
     body.top_p = 0.8;
   }
