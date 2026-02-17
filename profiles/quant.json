@@ -5,25 +5,24 @@
 
   "feeds": [
     { "name": "Quantocracy", "xmlUrl": "https://quantocracy.com/feed/", "htmlUrl": "https://quantocracy.com" },
-    { "name": "QuantStart", "xmlUrl": "https://www.quantstart.com/articles/feed/", "htmlUrl": "https://www.quantstart.com" },
     { "name": "Epchan (Ernie Chan)", "xmlUrl": "https://epchan.blogspot.com/feeds/posts/default", "htmlUrl": "https://epchan.blogspot.com" },
     { "name": "Alpaca Markets", "xmlUrl": "https://alpaca.markets/blog/rss/", "htmlUrl": "https://alpaca.markets/blog" },
     { "name": "Robot Wealth", "xmlUrl": "https://robotwealth.com/feed/", "htmlUrl": "https://robotwealth.com" },
     { "name": "Flirting with Models", "xmlUrl": "https://blog.thinknewfound.com/feed/", "htmlUrl": "https://blog.thinknewfound.com" },
     { "name": "Quantifiable Edges", "xmlUrl": "https://quantifiableedges.com/feed/", "htmlUrl": "https://quantifiableedges.com" },
-    { "name": "SSRN Quantitative Finance", "xmlUrl": "https://papers.ssrn.com/sol3/Jeljour_results.cfm?form_name=journalBrowse&journal_id=3302954&Network=no&lim=false&npage=1&SortOrder=ab_approval_date&stype=rss", "htmlUrl": "https://papers.ssrn.com" },
     { "name": "Alpha Architect", "xmlUrl": "https://alphaarchitect.com/feed/", "htmlUrl": "https://alphaarchitect.com" },
     { "name": "Philosophical Economics", "xmlUrl": "https://www.philosophicaleconomics.com/feed/", "htmlUrl": "https://www.philosophicaleconomics.com" },
     { "name": "Kris Abdelmessih (moontower)", "xmlUrl": "https://moontowermeta.com/feed/", "htmlUrl": "https://moontowermeta.com" },
     { "name": "Macro Ops", "xmlUrl": "https://macro-ops.com/feed/", "htmlUrl": "https://macro-ops.com" },
-    { "name": "Colby Davis (Verdad)", "xmlUrl": "https://verdadcap.com/feed", "htmlUrl": "https://verdadcap.com" },
     { "name": "Matt Levine (Bloomberg)", "xmlUrl": "https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine.rss", "htmlUrl": "https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine" },
     { "name": "Calculated Risk", "xmlUrl": "https://www.calculatedriskblog.com/feeds/posts/default", "htmlUrl": "https://www.calculatedriskblog.com" },
     { "name": "The Financial Hacker", "xmlUrl": "https://financial-hacker.com/feed/", "htmlUrl": "https://financial-hacker.com" },
     { "name": "Quantpedia", "xmlUrl": "https://quantpedia.com/feed/", "htmlUrl": "https://quantpedia.com" },
-    { "name": "Patrick Boyle", "xmlUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCASM3CGMneVQ4tPXSU4VmOw", "htmlUrl": "https://www.youtube.com/@PBoyle" },
     { "name": "AQR Insights", "xmlUrl": "https://www.aqr.com/Insights/RSS", "htmlUrl": "https://www.aqr.com/Insights" },
-    { "name": "Cliff Asness (AQR)", "xmlUrl": "https://www.aqr.com/Insights/Perspectives/RSS", "htmlUrl": "https://www.aqr.com/Insights/Perspectives" }
+    { "name": "Cliff Asness (AQR)", "xmlUrl": "https://www.aqr.com/Insights/Perspectives/RSS", "htmlUrl": "https://www.aqr.com/Insights/Perspectives" },
+    { "name": "綠角財經筆記", "xmlUrl": "https://greenhornfinancefootnote.blogspot.com/feeds/posts/default", "htmlUrl": "https://greenhornfinancefootnote.blogspot.com" },
+    { "name": "FinLab 量化通", "xmlUrl": "https://www.finlab.tw/feed/", "htmlUrl": "https://www.finlab.tw" },
+    { "name": "Hudson & Thames", "xmlUrl": "https://hudsonthames.org/feed/", "htmlUrl": "https://hudsonthames.org" }
   ],
 
   "categories": {
