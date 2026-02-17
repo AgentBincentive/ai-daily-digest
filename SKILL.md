@@ -27,7 +27,7 @@ description: "Multi-domain AI-powered RSS digest. Supports multiple profiles (ai
 
 ## 腳本目錄
 
-**重要**：所有腳本位於 `~/.claude/skills/ai-daily-digest/scripts/`。
+**重要**：所有腳本位於 `~/.claude/skills/digest/scripts/`。
 
 | 檔案 | 用途 |
 |------|------|
@@ -132,7 +132,7 @@ export OPENAI_API_KEY="<fallback-key>"
 export OPENAI_API_BASE="https://api.deepseek.com/v1"
 export OPENAI_MODEL="deepseek-chat"
 
-npx -y bun ~/.claude/skills/ai-daily-digest/scripts/digest.ts \
+npx -y bun ~/.claude/skills/digest/scripts/digest.ts \
   --profile <ai|quant> \
   --hours <timeRange> \
   --top-n <topN> \
