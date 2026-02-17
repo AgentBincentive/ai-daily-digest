@@ -12,7 +12,7 @@ const OPENAI_DEFAULT_API_BASE = 'https://api.openai.com/v1';
 const OPENAI_DEFAULT_MODEL = 'gpt-5-mini';
 const FEED_FETCH_TIMEOUT_MS = 15_000;
 const FEED_CONCURRENCY = 10;
-const GEMINI_BATCH_SIZE = 10;
+const GEMINI_BATCH_SIZE = 5;
 const MAX_CONCURRENT_GEMINI = 2;
 
 // ============================================================================
@@ -151,12 +151,14 @@ interface AIClient {
 
 export function stripHtml(html: string): string {
   return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/&#39;/g, "'")
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code)))
     .trim();
@@ -389,6 +391,7 @@ async function callOpenAICompatible(
   const body: Record<string, unknown> = {
     model,
     messages: [{ role: 'user', content: prompt }],
+    max_tokens: 16384,
   };
   if (supportsTemperature) {
     body.temperature = 0.3;
@@ -763,6 +766,29 @@ async function summarizeArticles(
               summary: result.summary || '',
               reason: result.reason || '',
             });
+          }
+
+          // Check for missing indices and retry individually
+          const missingItems = batch.filter(item => !summaries.has(item.index));
+          if (missingItems.length > 0) {
+            console.warn(`[digest] Summary batch incomplete: got ${parsed.results.length}/${batch.length}, retrying ${missingItems.length} missing`);
+            for (const item of missingItems) {
+              try {
+                const retryPrompt = buildSummaryPrompt([item], lang, profile);
+                const retryText = await aiClient.call(retryPrompt);
+                const retryParsed = parseJsonResponse<GeminiSummaryResult>(retryText);
+                if (retryParsed.results?.[0]) {
+                  const r = retryParsed.results[0];
+                  summaries.set(item.index, {
+                    titleZh: r.titleZh || '',
+                    summary: r.summary || '',
+                    reason: r.reason || '',
+                  });
+                }
+              } catch {
+                summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '' });
+              }
+            }
           }
         }
       } catch (error) {
