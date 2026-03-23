@@ -1,4 +1,4 @@
-import { writeFile, mkdir, readFile, readdir } from 'node:fs/promises';
+import { writeFile, mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { homedir } from 'node:os';
 import process from 'node:process';
@@ -12,8 +12,8 @@ const OPENAI_DEFAULT_API_BASE = 'https://api.openai.com/v1';
 const OPENAI_DEFAULT_MODEL = 'gpt-5-mini';
 const FEED_FETCH_TIMEOUT_MS = 15_000;
 const FEED_CONCURRENCY = 10;
-const GEMINI_BATCH_SIZE = 5;
-const MAX_CONCURRENT_GEMINI = 2;
+const GEMINI_BATCH_SIZE = 20;
+const MAX_CONCURRENT_GEMINI = 5;
 
 // ============================================================================
 // Domain Profile
@@ -1008,8 +1008,8 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
       if (a.keywords.length > 0) {
         report += `🏷️ ${a.keywords.join(', ')}\n\n`;
       }
+      report += `---\n\n`;
     }
-    report += `---\n\n`;
   }
 
   // ── Visual Statistics ──
@@ -1024,14 +1024,9 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
     report += `### 分類分布\n\n${pieChart}\n`;
   }
 
-  const barChart = generateKeywordBarChart(articles);
-  if (barChart) {
-    report += `### 高頻關鍵詞\n\n${barChart}\n`;
-  }
-
   const asciiChart = generateAsciiBarChart(articles);
   if (asciiChart) {
-    report += `<details>\n<summary>📈 純文字關鍵詞圖（終端友好）</summary>\n\n${asciiChart}\n</details>\n\n`;
+    report += `### 高頻關鍵詞\n\n${asciiChart}\n`;
   }
 
   const tagCloud = generateTagCloud(articles);
@@ -1187,6 +1182,10 @@ async function main(): Promise<void> {
   let lang: 'zh' | 'en' = 'zh';
   let outputPath = '';
   let heptabaseEnabled = false;
+  let forceRegen = false;
+  let filterKeywords: string[] = [];
+  let excludeKeywords: string[] = [];
+  const RADAR_PROJECT = '/Users/inezmac/Codes/break/quant-radar';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -1204,6 +1203,12 @@ async function main(): Promise<void> {
       outputPath = args[++i]!;
     } else if (arg === '--heptabase') {
       heptabaseEnabled = true;
+    } else if (arg === '--force') {
+      forceRegen = true;
+    } else if (arg === '--filter' && args[i + 1]) {
+      filterKeywords = args[++i]!.split(',').map(k => k.trim().toLowerCase());
+    } else if (arg === '--exclude' && args[i + 1]) {
+      excludeKeywords = args[++i]!.split(',').map(k => k.trim().toLowerCase());
     }
   }
 
@@ -1234,12 +1239,24 @@ async function main(): Promise<void> {
     // config doesn't exist or unreadable, continue with env vars
   }
 
-  // env vars take priority over config.json
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY || savedConfig.anthropicApiKey || '';
-  const geminiApiKey = process.env.GEMINI_API_KEY || savedConfig.geminiApiKey || '';
-  const openaiApiKey = process.env.OPENAI_API_KEY || savedConfig.openaiApiKey || '';
-  const openaiApiBase = process.env.OPENAI_API_BASE || savedConfig.openaiApiBase || '';
-  const openaiModel = process.env.OPENAI_MODEL || savedConfig.openaiModel || '';
+  // Load API keys from quant-radar .env as fallback (for shared access)
+  let radarEnv: Record<string, string> = {};
+  if (profileName === 'quant-radar') {
+    try {
+      const envContent = await readFile(`${RADAR_PROJECT}/.env`, 'utf-8');
+      for (const line of envContent.split('\n')) {
+        const match = line.match(/^([A-Z_]+)=["']?(.+?)["']?\s*$/);
+        if (match) radarEnv[match[1]!] = match[2]!;
+      }
+    } catch { /* .env not found, skip */ }
+  }
+
+  // Priority: env vars > config.json > quant-radar .env
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY || savedConfig.anthropicApiKey || radarEnv.ANTHROPIC_API_KEY || '';
+  const geminiApiKey = process.env.GEMINI_API_KEY || savedConfig.geminiApiKey || radarEnv.GEMINI_API_KEY || '';
+  const openaiApiKey = process.env.OPENAI_API_KEY || savedConfig.openaiApiKey || radarEnv.OPENAI_API_KEY || '';
+  const openaiApiBase = process.env.OPENAI_API_BASE || savedConfig.openaiApiBase || radarEnv.OPENAI_API_BASE || '';
+  const openaiModel = process.env.OPENAI_MODEL || savedConfig.openaiModel || radarEnv.OPENAI_MODEL || '';
 
   if (!anthropicApiKey && !geminiApiKey && !openaiApiKey) {
     console.error('[digest] Error: Missing API key. Set ANTHROPIC_API_KEY, GEMINI_API_KEY, and/or OPENAI_API_KEY.');
@@ -1257,7 +1274,27 @@ async function main(): Promise<void> {
   
   if (!outputPath) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    outputPath = `./digest-${profileName}-${dateStr}.md`;
+    const filterSuffix = filterKeywords.length > 0 ? `-${filterKeywords.join('+')}` : '';
+    if (profileName === 'quant-radar') {
+      outputPath = `${RADAR_PROJECT}/output/digest-${profileName}-${dateStr}${filterSuffix}.md`;
+    } else {
+      outputPath = `./digest-${profileName}-${dateStr}${filterSuffix}.md`;
+    }
+  }
+
+  // ── Cache check: skip if today's report already exists ──
+  if (!forceRegen) {
+    try {
+      const fileStat = await stat(outputPath);
+      if (fileStat.isFile() && fileStat.size > 0) {
+        console.log(`[digest] ⚡ Report already exists: ${outputPath}`);
+        console.log(`[digest] Generated at: ${fileStat.mtime.toLocaleString()}`);
+        console.log(`[digest] Use --force to regenerate.`);
+        return;
+      }
+    } catch {
+      // File doesn't exist, proceed normally
+    }
   }
 
   console.log(`[digest] === ${profile.name} ===`);
@@ -1265,6 +1302,8 @@ async function main(): Promise<void> {
   console.log(`[digest] Time range: ${hours} hours`);
   console.log(`[digest] Top N: ${topN}`);
   console.log(`[digest] Language: ${lang}`);
+  if (filterKeywords.length > 0) console.log(`[digest] Filter: ${filterKeywords.join(', ')}`);
+  if (excludeKeywords.length > 0) console.log(`[digest] Exclude: ${excludeKeywords.join(', ')}`);
   console.log(`[digest] Output: ${outputPath}`);
   console.log(`[digest] AI provider: ${anthropicApiKey ? 'Anthropic (primary)' : geminiApiKey ? 'Gemini (primary)' : 'OpenAI-compatible (primary)'}`);
   if (openaiApiKey) {
@@ -1281,6 +1320,37 @@ async function main(): Promise<void> {
   console.log(`[digest] Step 1/5: Fetching ${feeds.length} RSS feeds...`);
   const { articles: allArticles, errors: feedErrors } = await fetchAllFeeds(feeds);
 
+  // Auto-export and load Quant-Radar data if available
+  const radarFeedPath = `${RADAR_PROJECT}/output/radar-feed.json`;
+  const venvPython = `${RADAR_PROJECT}/.venv/bin/python`;
+  try {
+    // Auto-run export-digest to get fresh data from DB
+    const { execSync } = await import('node:child_process');
+    execSync(`${venvPython} main.py --export-digest --hours ${hours}`, {
+      cwd: RADAR_PROJECT,
+      stdio: 'pipe',
+    });
+    console.log(`[digest] Auto-exported Quant-Radar DB (${hours}h)`);
+  } catch {
+    // python/venv not available or main.py not found — skip
+  }
+  try {
+    const radarRaw = await readFile(radarFeedPath, 'utf-8');
+    const radarItems: Array<{title: string; link: string; pubDate: string; description: string; sourceName: string; sourceUrl: string}> = JSON.parse(radarRaw);
+    const radarArticles: Article[] = radarItems.map(item => ({
+      title: item.title,
+      link: item.link,
+      pubDate: new Date(item.pubDate),
+      description: item.description,
+      sourceName: item.sourceName,
+      sourceUrl: item.sourceUrl || item.link,
+    }));
+    allArticles.push(...radarArticles);
+    console.log(`[digest] Loaded ${radarArticles.length} articles from Quant-Radar (${radarFeedPath})`);
+  } catch {
+    // radar-feed.json not found — that's fine, skip silently
+  }
+
   if (allArticles.length === 0) {
     console.error('[digest] Error: No articles fetched from any feed. Check network connection.');
     process.exit(1);
@@ -1291,17 +1361,80 @@ async function main(): Promise<void> {
   const recentArticles = allArticles.filter(a => a.pubDate.getTime() > cutoffTime.getTime());
   
   console.log(`[digest] Found ${recentArticles.length} articles within last ${hours} hours`);
-  
-  if (recentArticles.length === 0) {
+
+  // ── Keyword filtering ──
+  let filteredArticles = recentArticles;
+  if (filterKeywords.length > 0) {
+    filteredArticles = filteredArticles.filter(a => {
+      const text = `${a.title} ${a.description}`.toLowerCase();
+      return filterKeywords.some(k => text.includes(k));
+    });
+    console.log(`[digest] Filter --filter "${filterKeywords.join(',')}" → ${filteredArticles.length} articles`);
+  }
+  if (excludeKeywords.length > 0) {
+    filteredArticles = filteredArticles.filter(a => {
+      const text = `${a.title} ${a.description}`.toLowerCase();
+      return !excludeKeywords.some(k => text.includes(k));
+    });
+    console.log(`[digest] Filter --exclude "${excludeKeywords.join(',')}" → ${filteredArticles.length} articles`);
+  }
+
+  // ── Deduplication ──
+  const beforeDedup = filteredArticles.length;
+
+  // Phase 1: URL dedup — keep earliest by pubDate
+  const urlMap = new Map<string, typeof filteredArticles[0]>();
+  for (const a of filteredArticles) {
+    const normalizedUrl = a.link.replace(/[?#].*$/, '').replace(/\/+$/, '').toLowerCase();
+    const existing = urlMap.get(normalizedUrl);
+    if (!existing || a.pubDate.getTime() < existing.pubDate.getTime()) {
+      urlMap.set(normalizedUrl, a);
+    }
+  }
+  filteredArticles = Array.from(urlMap.values());
+
+  // Phase 2: Title similarity dedup — extract keywords and compare overlap
+  function titleKeywords(title: string): Set<string> {
+    return new Set(
+      title.toLowerCase()
+        .replace(/[^\w\u4e00-\u9fff\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 1)
+    );
+  }
+  function titleSimilarity(a: string, b: string): number {
+    const kwA = titleKeywords(a);
+    const kwB = titleKeywords(b);
+    if (kwA.size === 0 || kwB.size === 0) return 0;
+    let overlap = 0;
+    for (const w of kwA) if (kwB.has(w)) overlap++;
+    return overlap / Math.min(kwA.size, kwB.size);
+  }
+  const dedupedArticles: typeof filteredArticles = [];
+  for (const article of filteredArticles) {
+    const isDuplicate = dedupedArticles.some(
+      existing => titleSimilarity(existing.title, article.title) > 0.6
+    );
+    if (!isDuplicate) {
+      dedupedArticles.push(article);
+    }
+  }
+  filteredArticles = dedupedArticles;
+
+  if (beforeDedup !== filteredArticles.length) {
+    console.log(`[digest] Dedup: ${beforeDedup} → ${filteredArticles.length} articles (removed ${beforeDedup - filteredArticles.length} duplicates)`);
+  }
+
+  if (filteredArticles.length === 0) {
     console.error(`[digest] Error: No articles found within the last ${hours} hours.`);
     console.error(`[digest] Try increasing --hours (e.g., --hours 168 for one week)`);
     process.exit(1);
   }
+
+  console.log(`[digest] Step 3/5: AI scoring ${filteredArticles.length} articles...`);
+  const scores = await scoreArticlesWithAI(filteredArticles, aiClient, profile);
   
-  console.log(`[digest] Step 3/5: AI scoring ${recentArticles.length} articles...`);
-  const scores = await scoreArticlesWithAI(recentArticles, aiClient, profile);
-  
-  const scoredArticles = recentArticles.map((article, index) => {
+  const scoredArticles = filteredArticles.map((article, index) => {
     const score = scores.get(index) || { relevance: 5, quality: 5, timeliness: 5, category: 'other', keywords: [] };
     return {
       ...article,
@@ -1311,7 +1444,37 @@ async function main(): Promise<void> {
   });
   
   scoredArticles.sort((a, b) => b.totalScore - a.totalScore);
-  const topArticles = scoredArticles.slice(0, topN);
+
+  // Final dedup: extract entity fingerprint, allow max 2 articles per event
+  function extractEntities(text: string): string[] {
+    const lower = text.toLowerCase();
+    // Match capitalized words, crypto names, Chinese proper nouns
+    const matches = text.match(/[A-Z][a-zA-Z]{2,}/g) || [];
+    // Also match $TICKER patterns
+    const tickers = text.match(/\$[A-Z]{2,}/g) || [];
+    return [...new Set([...matches.map(m => m.toLowerCase()), ...tickers.map(t => t.toLowerCase())])];
+  }
+  function eventFingerprint(article: typeof scoredArticles[0]): string {
+    const entities = extractEntities(`${article.title} ${article.description}`);
+    // Sort and take top 3 most distinctive entities
+    return entities.sort().slice(0, 3).join('|');
+  }
+  const topArticles: typeof scoredArticles = [];
+  const eventCount = new Map<string, number>();
+  const MAX_PER_EVENT = 2;
+  for (const article of scoredArticles) {
+    if (topArticles.length >= topN) break;
+    // Check title similarity
+    const titleDup = topArticles.some(
+      existing => titleSimilarity(existing.title, article.title) > 0.4
+    );
+    if (titleDup) continue;
+    // Check event fingerprint: max 2 articles per event
+    const fp = eventFingerprint(article);
+    if (fp && (eventCount.get(fp) || 0) >= MAX_PER_EVENT) continue;
+    topArticles.push(article);
+    if (fp) eventCount.set(fp, (eventCount.get(fp) || 0) + 1);
+  }
   
   console.log(`[digest] Top ${topN} articles selected (score range: ${topArticles[topArticles.length - 1]?.totalScore || 0} - ${topArticles[0]?.totalScore || 0})`);
   
