@@ -91,6 +91,16 @@ interface Article {
   sourceUrl: string;
 }
 
+interface TradingStrategy {
+  stars: number;           // 0-5 actionability rating
+  direction: string;       // 做多/做空/觀望/套利
+  instruments: string;     // 現貨、永續合約、選擇權等
+  timeframe: string;       // 短線(1-3天)/中線(1-2週)/長線(1月+)
+  trigger: string;         // 進場觸發條件
+  riskControl: string;     // 風控建議
+  model: string;           // 量化模型/公式（可為空）
+}
+
 interface ScoredArticle extends Article {
   score: number;
   scoreBreakdown: {
@@ -103,6 +113,7 @@ interface ScoredArticle extends Article {
   titleZh: string;
   summary: string;
   reason: string;
+  trading: TradingStrategy;
 }
 
 interface GeminiScoringResult {
@@ -693,7 +704,7 @@ export function buildSummaryPrompt(
 
   const p = profile.prompts;
 
-  return `${p.summaryRole}請為以下文章完成三件事：
+  return `${p.summaryRole}請為以下文章完成四件事：
 
 1. **中文標題** (titleZh): 將英文標題翻譯成自然的繁體中文。如果原標題已經是中文則保持不變。
 2. **摘要** (summary): 4-6 句話的結構化摘要，讓讀者不點進原文也能了解核心內容。包含：
@@ -701,6 +712,19 @@ export function buildSummaryPrompt(
    - 關鍵論點、技術方案或發現（2-3 句）
    - 結論或作者的核心觀點（1 句）
 3. **推薦理由** (reason): 1 句話說明「為什麼值得讀」，區別於摘要（摘要說「是什麼」，推薦理由說「為什麼」）。
+4. **交易策略分析** (trading): 基於文章內容，從交易員角度分析是否存在可操作的交易機會。
+   - stars (0-5): 交易可行性評分。0=無交易機會，1=僅供參考，2=有潛在機會但不確定性高，3=有明確方向中等可行性，4=強信號高可行性，5=極度明確建議立即關注。
+   - direction: 交易方向（做多/做空/觀望/套利/對沖）
+   - instruments: 建議交易工具（現貨、永續合約、選擇權 call/put、ETF 等）
+   - timeframe: 時間框架（短線 1-3 天 / 中線 1-2 週 / 長線 1 月+）
+   - trigger: 具體的進場觸發條件（價格水位、事件確認、指標信號等）
+   - riskControl: 風控建議（止損位、倉位比例、對沖方式）
+   - model: 如適用，提供量化模型或公式幫助讀者評估。例如：
+     * 資金費率套利: "年化收益 = funding_rate × 3 × 365，當 >15% 時值得參與"
+     * 選擇權策略: "買入 Put Spread: 買 P@95 賣 P@90，最大虧損=權利金差，最大獲利=5-權利金差"
+     * 風險評估: "Kelly fraction = (bp - q) / b，其中 b=賠率, p=勝率, q=1-p"
+     * 套利: "basis = (期貨價 - 現貨價) / 現貨價 × 100%，當 >2% 時可考慮做空基差"
+     * 如果不適用量化模型，填空字串 ""
 
 ${langInstruction}
 
@@ -722,7 +746,16 @@ ${articlesList}
       "index": 0,
       "titleZh": "繁體中文翻譯的標題",
       "summary": "摘要內容...",
-      "reason": "推薦理由..."
+      "reason": "推薦理由...",
+      "trading": {
+        "stars": 3,
+        "direction": "做多/做空/觀望",
+        "instruments": "現貨、永續合約",
+        "timeframe": "短線 1-3 天",
+        "trigger": "當價格突破 X 時進場",
+        "riskControl": "止損設在 Y，倉位不超過 Z%",
+        "model": "公式或模型描述（無則填空字串）"
+      }
     }
   ]
 }`;
@@ -733,8 +766,9 @@ async function summarizeArticles(
   aiClient: AIClient,
   lang: 'zh' | 'en',
   profile: DomainProfile
-): Promise<Map<number, { titleZh: string; summary: string; reason: string }>> {
-  const summaries = new Map<number, { titleZh: string; summary: string; reason: string }>();
+): Promise<Map<number, { titleZh: string; summary: string; reason: string; trading: TradingStrategy }>> {
+  const defaultTrading: TradingStrategy = { stars: 0, direction: '觀望', instruments: '', timeframe: '', trigger: '', riskControl: '', model: '' };
+  const summaries = new Map<number, { titleZh: string; summary: string; reason: string; trading: TradingStrategy }>();
   
   const indexed = articles.map(a => ({
     index: a.index,
@@ -761,10 +795,20 @@ async function summarizeArticles(
         
         if (parsed.results && Array.isArray(parsed.results)) {
           for (const result of parsed.results) {
+            const t = result.trading || {};
             summaries.set(result.index, {
               titleZh: result.titleZh || '',
               summary: result.summary || '',
               reason: result.reason || '',
+              trading: {
+                stars: typeof t.stars === 'number' ? t.stars : 0,
+                direction: t.direction || '觀望',
+                instruments: t.instruments || '',
+                timeframe: t.timeframe || '',
+                trigger: t.trigger || '',
+                riskControl: t.riskControl || '',
+                model: t.model || '',
+              },
             });
           }
 
@@ -779,14 +823,16 @@ async function summarizeArticles(
                 const retryParsed = parseJsonResponse<GeminiSummaryResult>(retryText);
                 if (retryParsed.results?.[0]) {
                   const r = retryParsed.results[0];
+                  const rt = r.trading || {};
                   summaries.set(item.index, {
                     titleZh: r.titleZh || '',
                     summary: r.summary || '',
                     reason: r.reason || '',
+                    trading: { stars: rt.stars || 0, direction: rt.direction || '觀望', instruments: rt.instruments || '', timeframe: rt.timeframe || '', trigger: rt.trigger || '', riskControl: rt.riskControl || '', model: rt.model || '' },
                   });
                 }
               } catch {
-                summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '' });
+                summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '', trading: { ...defaultTrading } });
               }
             }
           }
@@ -794,7 +840,7 @@ async function summarizeArticles(
       } catch (error) {
         console.warn(`[digest] Summary batch failed: ${error instanceof Error ? error.message : String(error)}`);
         for (const item of batch) {
-          summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '' });
+          summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '', trading: { ...defaultTrading } });
         }
       }
     });
@@ -1062,11 +1108,30 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
       if (a.keywords.length > 0) {
         report += `🏷️ ${a.keywords.join(', ')}\n\n`;
       }
+      // Trading strategy section
+      if (a.trading && a.trading.stars >= 0) {
+        const stars = a.trading.stars;
+        const starDisplay = stars === 0 ? '☆☆☆☆☆ (0/5)' : '★'.repeat(stars) + '☆'.repeat(5 - stars) + ` (${stars}/5)`;
+        report += `**交易可行性** ${starDisplay}\n\n`;
+        if (stars > 0) {
+          report += `| 項目 | 內容 |\n|------|------|\n`;
+          report += `| 方向 | ${a.trading.direction} |\n`;
+          if (a.trading.instruments) report += `| 工具 | ${a.trading.instruments} |\n`;
+          if (a.trading.timeframe) report += `| 時間框架 | ${a.trading.timeframe} |\n`;
+          if (a.trading.trigger) report += `| 進場條件 | ${a.trading.trigger} |\n`;
+          if (a.trading.riskControl) report += `| 風控建議 | ${a.trading.riskControl} |\n`;
+          report += `\n`;
+          if (a.trading.model) {
+            report += `📐 **量化模型**: \`${a.trading.model}\`\n\n`;
+          }
+        }
+      }
       report += `---\n\n`;
     }
   }
 
   // ── Footer ──
+  report += `> **⚠️ 免責聲明**：本報告中的交易策略建議由 AI 自動生成，僅供參考，不構成任何投資建議。交易加密貨幣、美股及衍生品具有高風險，可能導致全部本金損失。請讀者自行評估風險承受能力，並在做出任何交易決策前諮詢專業財務顧問。\n\n`;
   report += `*產生於 ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | 掃描 ${stats.successFeeds} 源 → 取得 ${stats.totalArticles} 篇 → 精選 ${articles.length} 篇*\n`;
   for (const line of profile.report.footerLines) {
     report += `${line}\n`;
@@ -1483,8 +1548,9 @@ async function main(): Promise<void> {
   const indexedTopArticles = topArticles.map((a, i) => ({ ...a, index: i }));
   const summaries = await summarizeArticles(indexedTopArticles, aiClient, lang, profile);
   
+  const defaultTradingFallback: TradingStrategy = { stars: 0, direction: '觀望', instruments: '', timeframe: '', trigger: '', riskControl: '', model: '' };
   const finalArticles: ScoredArticle[] = topArticles.map((a, i) => {
-    const sm = summaries.get(i) || { titleZh: a.title, summary: a.description.slice(0, 200), reason: '' };
+    const sm = summaries.get(i) || { titleZh: a.title, summary: a.description.slice(0, 200), reason: '', trading: { ...defaultTradingFallback } };
     return {
       title: a.title,
       link: a.link,
@@ -1503,6 +1569,7 @@ async function main(): Promise<void> {
       titleZh: sm.titleZh,
       summary: sm.summary,
       reason: sm.reason,
+      trading: sm.trading || { ...defaultTradingFallback },
     };
   });
   
