@@ -30,7 +30,9 @@
     { "name": "MarketWatch", "xmlUrl": "https://feeds.marketwatch.com/marketwatch/topstories", "htmlUrl": "https://www.marketwatch.com" },
     { "name": "CNBC Top News", "xmlUrl": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147", "htmlUrl": "https://www.cnbc.com" },
     { "name": "FRED Blog", "xmlUrl": "https://fredblog.stlouisfed.org/feed/", "htmlUrl": "https://fredblog.stlouisfed.org" },
-    { "name": "Abnormal Returns", "xmlUrl": "https://abnormalreturns.com/feed/", "htmlUrl": "https://abnormalreturns.com" }
+    { "name": "Abnormal Returns", "xmlUrl": "https://abnormalreturns.com/feed/", "htmlUrl": "https://abnormalreturns.com" },
+    { "name": "QuantInsti Blog", "xmlUrl": "https://blog.quantinsti.com/feed/", "htmlUrl": "https://blog.quantinsti.com" },
+    { "name": "Capital Spectator", "xmlUrl": "https://www.capitalspectator.com/feed/", "htmlUrl": "https://www.capitalspectator.com" }
   ],
 
   "categories": {
