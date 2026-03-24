@@ -1445,35 +1445,36 @@ async function main(): Promise<void> {
   
   scoredArticles.sort((a, b) => b.totalScore - a.totalScore);
 
-  // Final dedup: extract entity fingerprint, allow max 2 articles per event
-  function extractEntities(text: string): string[] {
-    const lower = text.toLowerCase();
-    // Match capitalized words, crypto names, Chinese proper nouns
-    const matches = text.match(/[A-Z][a-zA-Z]{2,}/g) || [];
-    // Also match $TICKER patterns
-    const tickers = text.match(/\$[A-Z]{2,}/g) || [];
-    return [...new Set([...matches.map(m => m.toLowerCase()), ...tickers.map(t => t.toLowerCase())])];
+  // Final dedup: cross-language entity matching, max 1 per event
+  function extractEntities(text: string): Set<string> {
+    const entities = new Set<string>();
+    // English proper nouns & acronyms (2+ chars)
+    for (const m of text.matchAll(/[A-Z][a-zA-Z]+/g)) entities.add(m[0].toLowerCase());
+    // English words inside Chinese text (e.g. "Aave" in "Aave社區通過")
+    for (const m of text.matchAll(/[a-zA-Z]{3,}/g)) entities.add(m[0].toLowerCase());
+    // $TICKER patterns
+    for (const m of text.matchAll(/\$[A-Z]{2,}/g)) entities.add(m[0].toLowerCase());
+    // Numbers with units (e.g. "$80 million", "420億", "2700萬")
+    for (const m of text.matchAll(/\d+[\.\d]*\s*(million|billion|萬|億|美元)/gi)) entities.add(m[0].toLowerCase().replace(/\s+/g, ''));
+    return entities;
   }
-  function eventFingerprint(article: typeof scoredArticles[0]): string {
-    const entities = extractEntities(`${article.title} ${article.description}`);
-    // Sort and take top 3 most distinctive entities
-    return entities.sort().slice(0, 3).join('|');
+  function entityOverlap(a: typeof scoredArticles[0], b: typeof scoredArticles[0]): number {
+    const entA = extractEntities(`${a.title} ${a.description.slice(0, 200)}`);
+    const entB = extractEntities(`${b.title} ${b.description.slice(0, 200)}`);
+    if (entA.size === 0 || entB.size === 0) return 0;
+    let overlap = 0;
+    for (const e of entA) if (entB.has(e)) overlap++;
+    return overlap / Math.min(entA.size, entB.size);
   }
   const topArticles: typeof scoredArticles = [];
-  const eventCount = new Map<string, number>();
-  const MAX_PER_EVENT = 2;
   for (const article of scoredArticles) {
     if (topArticles.length >= topN) break;
-    // Check title similarity
-    const titleDup = topArticles.some(
-      existing => titleSimilarity(existing.title, article.title) > 0.4
+    const isDuplicate = topArticles.some(existing =>
+      titleSimilarity(existing.title, article.title) > 0.4
+      || entityOverlap(existing, article) > 0.4
     );
-    if (titleDup) continue;
-    // Check event fingerprint: max 2 articles per event
-    const fp = eventFingerprint(article);
-    if (fp && (eventCount.get(fp) || 0) >= MAX_PER_EVENT) continue;
+    if (isDuplicate) continue;
     topArticles.push(article);
-    if (fp) eventCount.set(fp, (eventCount.get(fp) || 0) + 1);
   }
   
   console.log(`[digest] Top ${topN} articles selected (score range: ${topArticles[topArticles.length - 1]?.totalScore || 0} - ${topArticles[0]?.totalScore || 0})`);
