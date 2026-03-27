@@ -1703,8 +1703,8 @@ async function main(): Promise<void> {
   
   const successfulSources = new Set(allArticles.map(a => a.sourceName));
   
-  // Re-use cached market data for report header
-  const reportMarketData = cachedMarketSnapshot?.data;
+  // Fetch fresh market data for report header (or re-use cache if recent)
+  const reportMarketData = await getMarketSnapshot();
   const report = generateDigestReport(finalArticles, highlights, {
     totalFeeds: feeds.length,
     successFeeds: successfulSources.size,
