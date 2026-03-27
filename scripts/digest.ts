@@ -99,6 +99,7 @@ interface TradingStrategy {
   trigger: string;         // 進場觸發條件
   riskControl: string;     // 風控建議
   model: string;           // 量化模型/公式（可為空）
+  historicalRef: string;   // 歷史事件對比（可為空）
 }
 
 interface ScoredArticle extends Article {
@@ -689,10 +690,82 @@ async function scoreArticlesWithAI(
 // AI Summarization
 // ============================================================================
 
+// ── Real-time market data for trading strategy context ──
+
+interface MarketSnapshot {
+  btc: string;
+  eth: string;
+  sp500: string;
+  vix: string;
+  fearGreed: string;
+  fundingRate: string;
+}
+
+async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
+  const snapshot: MarketSnapshot = {
+    btc: 'N/A', eth: 'N/A', sp500: 'N/A', vix: 'N/A', fearGreed: 'N/A', fundingRate: 'N/A',
+  };
+  const timeout = 8000;
+
+  try {
+    // CoinGecko: BTC + ETH
+    const cgRes = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true',
+      { signal: AbortSignal.timeout(timeout) }
+    );
+    if (cgRes.ok) {
+      const cg = await cgRes.json() as any;
+      if (cg.bitcoin) snapshot.btc = `$${cg.bitcoin.usd?.toLocaleString()} (${cg.bitcoin.usd_24h_change?.toFixed(1)}%)`;
+      if (cg.ethereum) snapshot.eth = `$${cg.ethereum.usd?.toLocaleString()} (${cg.ethereum.usd_24h_change?.toFixed(1)}%)`;
+    }
+  } catch { /* ignore */ }
+
+  try {
+    // Fear & Greed Index
+    const fgRes = await fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(timeout) });
+    if (fgRes.ok) {
+      const fg = await fgRes.json() as any;
+      if (fg.data?.[0]) snapshot.fearGreed = `${fg.data[0].value} (${fg.data[0].value_classification})`;
+    }
+  } catch { /* ignore */ }
+
+  try {
+    // Binance BTC funding rate
+    const frRes = await fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', { signal: AbortSignal.timeout(timeout) });
+    if (frRes.ok) {
+      const fr = await frRes.json() as any;
+      if (fr[0]) {
+        const rate = (parseFloat(fr[0].fundingRate) * 100).toFixed(4);
+        const annualized = (parseFloat(fr[0].fundingRate) * 3 * 365 * 100).toFixed(1);
+        snapshot.fundingRate = `${rate}% (年化 ${annualized}%)`;
+      }
+    }
+  } catch { /* ignore */ }
+
+  return snapshot;
+}
+
+let cachedMarketSnapshot: { data: MarketSnapshot; time: number } | null = null;
+
+async function getMarketSnapshot(): Promise<MarketSnapshot> {
+  const now = Date.now();
+  if (cachedMarketSnapshot && now - cachedMarketSnapshot.time < 300_000) {
+    return cachedMarketSnapshot.data;
+  }
+  const data = await fetchMarketSnapshot();
+  cachedMarketSnapshot = { data, time: now };
+  const available = Object.entries(data).filter(([, v]) => v !== 'N/A').length;
+  console.log(`[digest] Market snapshot: ${available}/6 data points fetched`);
+  return data;
+}
+
+// ── Summary prompt builder ──
+
 export function buildSummaryPrompt(
   articles: Array<{ index: number; title: string; description: string; sourceName: string; link: string }>,
   lang: 'zh' | 'en',
-  profile: DomainProfile
+  profile: DomainProfile,
+  marketData?: MarketSnapshot,
 ): string {
   const articlesList = articles.map(a =>
     `Index ${a.index}: [${a.sourceName}] ${a.title}\nURL: ${a.link}\n${a.description.slice(0, 800)}`
@@ -703,6 +776,20 @@ export function buildSummaryPrompt(
     : 'Write summaries, reasons, and title translations in English.';
 
   const p = profile.prompts;
+
+  let marketContext = '';
+  if (marketData) {
+    const lines = [];
+    if (marketData.btc !== 'N/A') lines.push(`BTC: ${marketData.btc}`);
+    if (marketData.eth !== 'N/A') lines.push(`ETH: ${marketData.eth}`);
+    if (marketData.sp500 !== 'N/A') lines.push(`S&P 500: ${marketData.sp500}`);
+    if (marketData.vix !== 'N/A') lines.push(`VIX: ${marketData.vix}`);
+    if (marketData.fearGreed !== 'N/A') lines.push(`恐懼與貪婪指數: ${marketData.fearGreed}`);
+    if (marketData.fundingRate !== 'N/A') lines.push(`BTC 資金費率: ${marketData.fundingRate}`);
+    if (lines.length > 0) {
+      marketContext = `\n## 即時市場數據（請參考以下數據來制定更精確的交易策略建議）\n${lines.join('\n')}\n`;
+    }
+  }
 
   return `${p.summaryRole}請為以下文章完成四件事：
 
@@ -719,12 +806,25 @@ export function buildSummaryPrompt(
    - timeframe: 時間框架（短線 1-3 天 / 中線 1-2 週 / 長線 1 月+）
    - trigger: 具體的進場觸發條件（價格水位、事件確認、指標信號等）
    - riskControl: 風控建議（止損位、倉位比例、對沖方式）
-   - model: 如適用，提供量化模型或公式幫助讀者評估。例如：
-     * 資金費率套利: "年化收益 = funding_rate × 3 × 365，當 >15% 時值得參與"
-     * 選擇權策略: "買入 Put Spread: 買 P@95 賣 P@90，最大虧損=權利金差，最大獲利=5-權利金差"
-     * 風險評估: "Kelly fraction = (bp - q) / b，其中 b=賠率, p=勝率, q=1-p"
-     * 套利: "basis = (期貨價 - 現貨價) / 現貨價 × 100%，當 >2% 時可考慮做空基差"
-     * 如果不適用量化模型，填空字串 ""
+   - model: 盡量提供量化模型、公式或具體數字幫助讀者評估。根據文章場景選擇最適合的框架：
+     【倉位管理】Kelly Criterion: "f* = (bp - q) / b，b=賠率 p=勝率 q=1-p。例: 賠率2:1 勝率55% → f*=0.325，建議倉位32.5%"
+     【選擇權-看跌】Put Spread: "買 P@{現價×0.95} 賣 P@{現價×0.90}，最大虧損=權利金差，最大獲利=行權價差-權利金差"
+     【選擇權-看漲】Call Spread: "買 C@{現價×1.05} 賣 C@{現價×1.10}，最大虧損=權利金差"
+     【選擇權-中性】Iron Condor: "賣 C@上軌 買 C@更上 + 賣 P@下軌 買 P@更下，賺取時間價值衰減"
+     【選擇權-波動率】Straddle: "同時買 C+P@ATM，需要波動率 > 隱含波動率才有利可圖"
+     【資金費率套利】"年化 = funding_rate × 3 × 365。現貨做多+永續做空，鎖定費率收益"
+     【基差套利】"basis = (期貨-現貨)/現貨 × 100%。年化 = basis/到期天數×365。當年化>15%可參與"
+     【風險報酬比】"R:R = 潛在獲利/潛在虧損。至少>2:1才值得進場。EV = 勝率×獲利 - 敗率×虧損"
+     【技術面】乖離率: "乖離率 = (現價-MA)/MA×100%。>10%超買考慮減倉，<-10%超賣考慮建倉"
+     【穩定幣脫鉤】"折價率 = (1-現價)/1×100%。歷史恢復率、恢復時間、協議TVL/儲備比率判斷恢復可能性"
+     【清算風險】"清算價 = 進場價 × (1 - 1/槓桿倍數)。維持保證金率低於X%時追加或減倉"
+     * 如果不適用任何量化模型，填空字串 ""
+     * 盡量帶入文章中提到的具體數字（價格、金額、比率）讓公式更實用
+   - historicalRef (可選): 如果這類事件在歷史上有先例，提供簡短的歷史對比。例如：
+     * "2024年3月 SEC 批准 BTC ETF 後，BTC 在 2 週內從 42K 漲至 52K (+24%)"
+     * "2022年5月 UST 脫鉤事件中，LUNA 從 $80 跌至 $0.01，但 USDC/USDT 在 3 天內恢復錨定"
+     * "歷史上 VIX 突破 30 後，S&P 500 在 3 個月內平均反彈 12%"
+     * 如果沒有明確的歷史先例，填空字串 ""
 
 ${langInstruction}
 
@@ -735,6 +835,7 @@ ${langInstruction}
 - 如果文章涉及對比或選型，要點出比較對象和結論
 - 目標：讀者花 30 秒讀完摘要，就能決定是否值得花 10 分鐘讀原文
 
+${marketContext}
 ## 待摘要文章
 
 ${articlesList}
@@ -754,7 +855,8 @@ ${articlesList}
         "timeframe": "短線 1-3 天",
         "trigger": "當價格突破 X 時進場",
         "riskControl": "止損設在 Y，倉位不超過 Z%",
-        "model": "公式或模型描述（無則填空字串）"
+        "model": "公式或模型描述（無則填空字串）",
+        "historicalRef": "歷史事件對比（無則填空字串）"
       }
     }
   ]
@@ -767,7 +869,7 @@ async function summarizeArticles(
   lang: 'zh' | 'en',
   profile: DomainProfile
 ): Promise<Map<number, { titleZh: string; summary: string; reason: string; trading: TradingStrategy }>> {
-  const defaultTrading: TradingStrategy = { stars: 0, direction: '觀望', instruments: '', timeframe: '', trigger: '', riskControl: '', model: '' };
+  const defaultTrading: TradingStrategy = { stars: 0, direction: '觀望', instruments: '', timeframe: '', trigger: '', riskControl: '', model: '', historicalRef: '' };
   const summaries = new Map<number, { titleZh: string; summary: string; reason: string; trading: TradingStrategy }>();
   
   const indexed = articles.map(a => ({
@@ -784,12 +886,15 @@ async function summarizeArticles(
   }
   
   console.log(`[digest] Generating summaries for ${articles.length} articles in ${batches.length} batches`);
-  
+
+  // Fetch market data once for all batches
+  const marketData = await getMarketSnapshot();
+
   for (let i = 0; i < batches.length; i += MAX_CONCURRENT_GEMINI) {
     const batchGroup = batches.slice(i, i + MAX_CONCURRENT_GEMINI);
     const promises = batchGroup.map(async (batch) => {
       try {
-        const prompt = buildSummaryPrompt(batch, lang, profile);
+        const prompt = buildSummaryPrompt(batch, lang, profile, marketData);
         const responseText = await aiClient.call(prompt);
         const parsed = parseJsonResponse<GeminiSummaryResult>(responseText);
         
@@ -808,6 +913,7 @@ async function summarizeArticles(
                 trigger: t.trigger || '',
                 riskControl: t.riskControl || '',
                 model: t.model || '',
+                historicalRef: t.historicalRef || '',
               },
             });
           }
@@ -818,7 +924,7 @@ async function summarizeArticles(
             console.warn(`[digest] Summary batch incomplete: got ${parsed.results.length}/${batch.length}, retrying ${missingItems.length} missing`);
             for (const item of missingItems) {
               try {
-                const retryPrompt = buildSummaryPrompt([item], lang, profile);
+                const retryPrompt = buildSummaryPrompt([item], lang, profile, marketData);
                 const retryText = await aiClient.call(retryPrompt);
                 const retryParsed = parseJsonResponse<GeminiSummaryResult>(retryText);
                 if (retryParsed.results?.[0]) {
@@ -828,7 +934,7 @@ async function summarizeArticles(
                     titleZh: r.titleZh || '',
                     summary: r.summary || '',
                     reason: r.reason || '',
-                    trading: { stars: rt.stars || 0, direction: rt.direction || '觀望', instruments: rt.instruments || '', timeframe: rt.timeframe || '', trigger: rt.trigger || '', riskControl: rt.riskControl || '', model: rt.model || '' },
+                    trading: { stars: rt.stars || 0, direction: rt.direction || '觀望', instruments: rt.instruments || '', timeframe: rt.timeframe || '', trigger: rt.trigger || '', riskControl: rt.riskControl || '', model: rt.model || '', historicalRef: rt.historicalRef || '' },
                   });
                 }
               } catch {
@@ -1019,7 +1125,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   filteredArticles: number;
   hours: number;
   lang: string;
-}, profile: DomainProfile): string {
+}, profile: DomainProfile, marketData?: MarketSnapshot): string {
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
 
@@ -1029,6 +1135,22 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
 
   let report = `${profile.report.title} — ${dateStr}\n\n`;
   report += `${subtitle}\n\n`;
+
+  // ── Market Snapshot ──
+  if (marketData) {
+    const lines = [];
+    if (marketData.btc !== 'N/A') lines.push(`| BTC | ${marketData.btc} |`);
+    if (marketData.eth !== 'N/A') lines.push(`| ETH | ${marketData.eth} |`);
+    if (marketData.sp500 !== 'N/A') lines.push(`| S&P 500 | ${marketData.sp500} |`);
+    if (marketData.vix !== 'N/A') lines.push(`| VIX | ${marketData.vix} |`);
+    if (marketData.fearGreed !== 'N/A') lines.push(`| 恐懼與貪婪指數 | ${marketData.fearGreed} |`);
+    if (marketData.fundingRate !== 'N/A') lines.push(`| BTC 資金費率 | ${marketData.fundingRate} |`);
+    if (lines.length > 0) {
+      report += `## 📈 即時市場快照\n\n`;
+      report += `| 指標 | 數值 |\n|------|------|\n`;
+      report += lines.join('\n') + '\n\n';
+    }
+  }
 
   // ── Today's Highlights ──
   if (highlights) {
@@ -1123,6 +1245,9 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
           report += `\n`;
           if (a.trading.model) {
             report += `📐 **量化模型**: \`${a.trading.model}\`\n\n`;
+          }
+          if (a.trading.historicalRef) {
+            report += `📜 **歷史對比**: ${a.trading.historicalRef}\n\n`;
           }
         }
       }
@@ -1548,7 +1673,7 @@ async function main(): Promise<void> {
   const indexedTopArticles = topArticles.map((a, i) => ({ ...a, index: i }));
   const summaries = await summarizeArticles(indexedTopArticles, aiClient, lang, profile);
   
-  const defaultTradingFallback: TradingStrategy = { stars: 0, direction: '觀望', instruments: '', timeframe: '', trigger: '', riskControl: '', model: '' };
+  const defaultTradingFallback: TradingStrategy = { stars: 0, direction: '觀望', instruments: '', timeframe: '', trigger: '', riskControl: '', model: '', historicalRef: '' };
   const finalArticles: ScoredArticle[] = topArticles.map((a, i) => {
     const sm = summaries.get(i) || { titleZh: a.title, summary: a.description.slice(0, 200), reason: '', trading: { ...defaultTradingFallback } };
     return {
@@ -1578,6 +1703,8 @@ async function main(): Promise<void> {
   
   const successfulSources = new Set(allArticles.map(a => a.sourceName));
   
+  // Re-use cached market data for report header
+  const reportMarketData = cachedMarketSnapshot?.data;
   const report = generateDigestReport(finalArticles, highlights, {
     totalFeeds: feeds.length,
     successFeeds: successfulSources.size,
@@ -1585,7 +1712,7 @@ async function main(): Promise<void> {
     filteredArticles: recentArticles.length,
     hours,
     lang,
-  }, profile);
+  }, profile, reportMarketData);
   
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, report);
