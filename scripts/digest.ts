@@ -1635,7 +1635,7 @@ async function main(): Promise<void> {
   
   scoredArticles.sort((a, b) => b.totalScore - a.totalScore);
 
-  // Final dedup: cross-language entity matching, max 1 per event
+  // Final dedup: cross-language entity matching + title similarity
   function extractEntities(text: string): Set<string> {
     const entities = new Set<string>();
     // English proper nouns & acronyms (2+ chars)
@@ -1649,21 +1649,36 @@ async function main(): Promise<void> {
     return entities;
   }
   function entityOverlap(a: typeof scoredArticles[0], b: typeof scoredArticles[0]): number {
-    const entA = extractEntities(`${a.title} ${a.description.slice(0, 200)}`);
-    const entB = extractEntities(`${b.title} ${b.description.slice(0, 200)}`);
+    // Use title + longer description slice for better cross-language matching
+    const entA = extractEntities(`${a.title} ${a.description.slice(0, 500)}`);
+    const entB = extractEntities(`${b.title} ${b.description.slice(0, 500)}`);
     if (entA.size === 0 || entB.size === 0) return 0;
     let overlap = 0;
     for (const e of entA) if (entB.has(e)) overlap++;
     return overlap / Math.min(entA.size, entB.size);
   }
+  // Also compare titleZh if available (post-summary dedup uses this)
+  function combinedSimilarity(a: typeof scoredArticles[0], b: typeof scoredArticles[0]): boolean {
+    // Title similarity (original language)
+    if (titleSimilarity(a.title, b.title) > 0.4) return true;
+    // Entity overlap (cross-language)
+    if (entityOverlap(a, b) > 0.4) return true;
+    // Keywords from AI scoring overlap (same topic = same keywords)
+    if (a.breakdown?.keywords && b.breakdown?.keywords) {
+      const kwA = new Set(a.breakdown.keywords.map((k: string) => k.toLowerCase()));
+      const kwB = new Set(b.breakdown.keywords.map((k: string) => k.toLowerCase()));
+      if (kwA.size > 0 && kwB.size > 0) {
+        let kwOverlap = 0;
+        for (const k of kwA) if (kwB.has(k)) kwOverlap++;
+        if (kwOverlap / Math.min(kwA.size, kwB.size) > 0.6) return true;
+      }
+    }
+    return false;
+  }
   const topArticles: typeof scoredArticles = [];
   for (const article of scoredArticles) {
     if (topArticles.length >= topN) break;
-    const isDuplicate = topArticles.some(existing =>
-      titleSimilarity(existing.title, article.title) > 0.4
-      || entityOverlap(existing, article) > 0.4
-    );
-    if (isDuplicate) continue;
+    if (topArticles.some(existing => combinedSimilarity(existing, article))) continue;
     topArticles.push(article);
   }
   
