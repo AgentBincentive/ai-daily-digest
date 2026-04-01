@@ -697,13 +697,17 @@ interface MarketSnapshot {
   eth: string;
   sp500: string;
   vix: string;
+  dxy: string;
   fearGreed: string;
-  fundingRate: string;
+  btcFundingRate: string;
+  ethFundingRate: string;
+  btcOpenInterest: string;
 }
 
 async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
   const snapshot: MarketSnapshot = {
-    btc: 'N/A', eth: 'N/A', sp500: 'N/A', vix: 'N/A', fearGreed: 'N/A', fundingRate: 'N/A',
+    btc: 'N/A', eth: 'N/A', sp500: 'N/A', vix: 'N/A', dxy: 'N/A',
+    fearGreed: 'N/A', btcFundingRate: 'N/A', ethFundingRate: 'N/A', btcOpenInterest: 'N/A',
   };
   const timeout = 8000;
 
@@ -737,10 +741,64 @@ async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
       if (fr[0]) {
         const rate = (parseFloat(fr[0].fundingRate) * 100).toFixed(4);
         const annualized = (parseFloat(fr[0].fundingRate) * 3 * 365 * 100).toFixed(1);
-        snapshot.fundingRate = `${rate}% (年化 ${annualized}%)`;
+        snapshot.btcFundingRate = `${rate}% (年化 ${annualized}%)`;
       }
     }
   } catch { /* ignore */ }
+
+  try {
+    // Binance ETH funding rate
+    const ethFrRes = await fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol=ETHUSDT&limit=1', { signal: AbortSignal.timeout(timeout) });
+    if (ethFrRes.ok) {
+      const efr = await ethFrRes.json() as any;
+      if (efr[0]) {
+        const rate = (parseFloat(efr[0].fundingRate) * 100).toFixed(4);
+        const annualized = (parseFloat(efr[0].fundingRate) * 3 * 365 * 100).toFixed(1);
+        snapshot.ethFundingRate = `${rate}% (年化 ${annualized}%)`;
+      }
+    }
+  } catch { /* ignore */ }
+
+  try {
+    // Binance BTC open interest
+    const oiRes = await fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', { signal: AbortSignal.timeout(timeout) });
+    if (oiRes.ok) {
+      const oi = await oiRes.json() as any;
+      if (oi.openInterest) {
+        const btcOI = parseFloat(oi.openInterest);
+        snapshot.btcOpenInterest = `${btcOI.toLocaleString()} BTC`;
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Yahoo Finance v8 chart API: S&P 500, VIX, DXY
+  const yfSymbols = [
+    { symbol: '%5EGSPC', key: 'sp500' as const },
+    { symbol: '%5EVIX', key: 'vix' as const },
+    { symbol: 'DX-Y.NYB', key: 'dxy' as const },
+  ];
+  for (const { symbol, key } of yfSymbols) {
+    try {
+      const res = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`,
+        { signal: AbortSignal.timeout(timeout), headers: { 'User-Agent': 'Mozilla/5.0' } }
+      );
+      if (res.ok) {
+        const data = await res.json() as any;
+        const meta = data.chart?.result?.[0]?.meta;
+        if (meta) {
+          const price = meta.regularMarketPrice;
+          const prev = meta.chartPreviousClose || meta.previousClose || 0;
+          const pct = prev ? ((price - prev) / prev * 100).toFixed(1) : '0';
+          if (key === 'vix') {
+            snapshot.vix = `${price}`;
+          } else {
+            snapshot[key] = `${price.toLocaleString()} (${pct}%)`;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
 
   return snapshot;
 }
@@ -755,7 +813,7 @@ async function getMarketSnapshot(): Promise<MarketSnapshot> {
   const data = await fetchMarketSnapshot();
   cachedMarketSnapshot = { data, time: now };
   const available = Object.entries(data).filter(([, v]) => v !== 'N/A').length;
-  console.log(`[digest] Market snapshot: ${available}/6 data points fetched`);
+  console.log(`[digest] Market snapshot: ${available}/9 data points fetched`);
   return data;
 }
 
@@ -784,8 +842,11 @@ export function buildSummaryPrompt(
     if (marketData.eth !== 'N/A') lines.push(`ETH: ${marketData.eth}`);
     if (marketData.sp500 !== 'N/A') lines.push(`S&P 500: ${marketData.sp500}`);
     if (marketData.vix !== 'N/A') lines.push(`VIX: ${marketData.vix}`);
+    if (marketData.dxy !== 'N/A') lines.push(`美元指數 DXY: ${marketData.dxy}`);
     if (marketData.fearGreed !== 'N/A') lines.push(`恐懼與貪婪指數: ${marketData.fearGreed}`);
-    if (marketData.fundingRate !== 'N/A') lines.push(`BTC 資金費率: ${marketData.fundingRate}`);
+    if (marketData.btcFundingRate !== 'N/A') lines.push(`BTC 資金費率: ${marketData.btcFundingRate}`);
+    if (marketData.ethFundingRate !== 'N/A') lines.push(`ETH 資金費率: ${marketData.ethFundingRate}`);
+    if (marketData.btcOpenInterest !== 'N/A') lines.push(`BTC 未平倉量: ${marketData.btcOpenInterest}`);
     if (lines.length > 0) {
       marketContext = `\n## 即時市場數據（請參考以下數據來制定更精確的交易策略建議）\n${lines.join('\n')}\n`;
     }
@@ -1143,8 +1204,11 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
     if (marketData.eth !== 'N/A') lines.push(`| ETH | ${marketData.eth} |`);
     if (marketData.sp500 !== 'N/A') lines.push(`| S&P 500 | ${marketData.sp500} |`);
     if (marketData.vix !== 'N/A') lines.push(`| VIX | ${marketData.vix} |`);
+    if (marketData.dxy !== 'N/A') lines.push(`| 美元指數 DXY | ${marketData.dxy} |`);
     if (marketData.fearGreed !== 'N/A') lines.push(`| 恐懼與貪婪指數 | ${marketData.fearGreed} |`);
-    if (marketData.fundingRate !== 'N/A') lines.push(`| BTC 資金費率 | ${marketData.fundingRate} |`);
+    if (marketData.btcFundingRate !== 'N/A') lines.push(`| BTC 資金費率 | ${marketData.btcFundingRate} |`);
+    if (marketData.ethFundingRate !== 'N/A') lines.push(`| ETH 資金費率 | ${marketData.ethFundingRate} |`);
+    if (marketData.btcOpenInterest !== 'N/A') lines.push(`| BTC 未平倉量 | ${marketData.btcOpenInterest} |`);
     if (lines.length > 0) {
       report += `## 📈 即時市場快照\n\n`;
       report += `| 指標 | 數值 |\n|------|------|\n`;
