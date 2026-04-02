@@ -1729,11 +1729,41 @@ async function main(): Promise<void> {
     }
     return false;
   }
+  // Extract primary subject from title (capitalized proper nouns 3+ chars)
+  function primarySubject(title: string): string[] {
+    const subjects: string[] = [];
+    // Match English proper nouns (capitalized, 3+ chars)
+    for (const m of title.matchAll(/[A-Z][a-zA-Z]{2,}/g)) {
+      const w = m[0].toLowerCase();
+      // Skip common words
+      if (!['the', 'and', 'for', 'with', 'from', 'that', 'this', 'has', 'was', 'are', 'not', 'but'].includes(w)) {
+        subjects.push(w);
+      }
+    }
+    // Also extract from Chinese text: English words embedded in Chinese
+    for (const m of title.matchAll(/[a-zA-Z]{3,}/g)) {
+      subjects.push(m[0].toLowerCase());
+    }
+    return [...new Set(subjects)];
+  }
+
   const topArticles: typeof scoredArticles = [];
+  const subjectCount = new Map<string, number>();
+  const MAX_PER_SUBJECT = 2;
+
   for (const article of scoredArticles) {
     if (topArticles.length >= topN) break;
+    // Check combined similarity
     if (topArticles.some(existing => combinedSimilarity(existing, article))) continue;
+    // Check subject frequency: max 2 articles per primary subject
+    const subjects = primarySubject(article.title);
+    const overRepresented = subjects.some(s => (subjectCount.get(s) || 0) >= MAX_PER_SUBJECT);
+    if (overRepresented) continue;
+    // Accept article
     topArticles.push(article);
+    for (const s of subjects) {
+      subjectCount.set(s, (subjectCount.get(s) || 0) + 1);
+    }
   }
   
   console.log(`[digest] Top ${topN} articles selected (score range: ${topArticles[topArticles.length - 1]?.totalScore || 0} - ${topArticles[0]?.totalScore || 0})`);
