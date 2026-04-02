@@ -1294,25 +1294,15 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
       if (a.keywords.length > 0) {
         report += `🏷️ ${a.keywords.join(', ')}\n\n`;
       }
-      // Trading strategy section
+      // Trading strategy section - star rating + link to deep analysis
       if (a.trading && a.trading.stars >= 0) {
         const stars = a.trading.stars;
         const starDisplay = stars === 0 ? '☆☆☆☆☆ (0/5)' : '★'.repeat(stars) + '☆'.repeat(5 - stars) + ` (${stars}/5)`;
-        report += `**交易可行性** ${starDisplay}\n\n`;
+        const analysisLink = `/analysis/${dateStr.replace(/-/g, '')}/${globalIndex}`;
         if (stars > 0) {
-          report += `| 項目 | 內容 |\n|------|------|\n`;
-          report += `| 方向 | ${a.trading.direction} |\n`;
-          if (a.trading.instruments) report += `| 工具 | ${a.trading.instruments} |\n`;
-          if (a.trading.timeframe) report += `| 時間框架 | ${a.trading.timeframe} |\n`;
-          if (a.trading.trigger) report += `| 進場條件 | ${a.trading.trigger} |\n`;
-          if (a.trading.riskControl) report += `| 風控建議 | ${a.trading.riskControl} |\n`;
-          report += `\n`;
-          if (a.trading.model) {
-            report += `📐 **量化模型**: \`${a.trading.model}\`\n\n`;
-          }
-          if (a.trading.historicalRef) {
-            report += `📜 **歷史對比**: ${a.trading.historicalRef}\n\n`;
-          }
+          report += `**交易可行性** ${starDisplay} 📊 [查看深度分析 →](${analysisLink})\n\n`;
+        } else {
+          report += `**交易可行性** ${starDisplay}\n\n`;
         }
       }
       report += `---\n\n`;
