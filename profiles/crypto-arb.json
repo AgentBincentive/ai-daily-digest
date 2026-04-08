@@ -1,0 +1,86 @@
+{
+  "id": "crypto-arb",
+  "name": "Crypto Arbitrage 套利研究日報",
+  "description": "專注加密貨幣套利策略：MEV、資金費率、基差交易、跨交易所套利、DEX 套利、學術研究",
+
+  "feeds": [
+    { "name": "Flashbots Writings", "xmlUrl": "https://writings.flashbots.net/rss.xml", "htmlUrl": "https://writings.flashbots.net" },
+    { "name": "Flashbots Forum (Research)", "xmlUrl": "https://collective.flashbots.net/c/research/20.rss", "htmlUrl": "https://collective.flashbots.net/c/research" },
+    { "name": "Flashbots (Medium)", "xmlUrl": "https://medium.com/feed/flashbots", "htmlUrl": "https://medium.com/flashbots" },
+    { "name": "ethresear.ch", "xmlUrl": "https://ethresear.ch/posts.rss", "htmlUrl": "https://ethresear.ch" },
+    { "name": "samczsun", "xmlUrl": "https://samczsun.com/rss/", "htmlUrl": "https://samczsun.com" },
+    { "name": "Trail of Bits", "xmlUrl": "https://blog.trailofbits.com/feed/", "htmlUrl": "https://blog.trailofbits.com" },
+    { "name": "Deribit Insights", "xmlUrl": "https://insights.deribit.com/feed/", "htmlUrl": "https://insights.deribit.com" },
+    { "name": "BitMEX Blog", "xmlUrl": "https://www.bitmex.com/feed", "htmlUrl": "https://www.bitmex.com/blog" },
+    { "name": "Amberdata Blog", "xmlUrl": "https://blog.amberdata.io/rss.xml", "htmlUrl": "https://blog.amberdata.io" },
+    { "name": "arXiv q-fin.TR", "xmlUrl": "https://arxiv.org/rss/q-fin.TR", "htmlUrl": "https://arxiv.org/list/q-fin.TR/recent" },
+    { "name": "arXiv cs.CE", "xmlUrl": "https://arxiv.org/rss/cs.CE", "htmlUrl": "https://arxiv.org/list/cs.CE/recent" },
+    { "name": "Dragonfly Research", "xmlUrl": "https://medium.com/feed/dragonfly-research", "htmlUrl": "https://medium.com/dragonfly-research" },
+    { "name": "Gauntlet Networks", "xmlUrl": "https://medium.com/feed/gauntlet-networks", "htmlUrl": "https://medium.com/gauntlet-networks" },
+    { "name": "Multicoin Capital", "xmlUrl": "https://multicoin.capital/rss.xml", "htmlUrl": "https://multicoin.capital" },
+    { "name": "Blocknative Blog", "xmlUrl": "https://www.blocknative.com/blog/rss.xml", "htmlUrl": "https://www.blocknative.com/blog" },
+    { "name": "Vitalik Buterin", "xmlUrl": "https://vitalik.eth.limo/feed.xml", "htmlUrl": "https://vitalik.eth.limo" },
+    { "name": "Chainalysis Blog", "xmlUrl": "https://www.chainalysis.com/feed/", "htmlUrl": "https://www.chainalysis.com/blog" },
+    { "name": "r/algotrading (arbitrage)", "xmlUrl": "https://www.reddit.com/r/algotrading/search.rss?q=crypto+arbitrage+OR+funding+rate+OR+basis+trade&restrict_sr=1&sort=new", "htmlUrl": "https://www.reddit.com/r/algotrading" },
+    { "name": "r/MEV", "xmlUrl": "https://www.reddit.com/r/MEV/.rss", "htmlUrl": "https://www.reddit.com/r/MEV" },
+    { "name": "EigenPhi (MEV Analytics)", "xmlUrl": "https://eigenphi.substack.com/feed", "htmlUrl": "https://eigenphi.substack.com" },
+    { "name": "HangukQuant Research", "xmlUrl": "https://www.research.hangukquant.com/feed", "htmlUrl": "https://www.research.hangukquant.com" },
+    { "name": "1Token Blog", "xmlUrl": "https://blog.1token.tech/feed/", "htmlUrl": "https://blog.1token.tech" },
+    { "name": "Arbitrage Andy", "xmlUrl": "https://arbitrageandy.substack.com/feed", "htmlUrl": "https://arbitrageandy.substack.com" },
+    { "name": "Harbourfront Quant", "xmlUrl": "https://harbourfrontquant.substack.com/feed", "htmlUrl": "https://harbourfrontquant.substack.com" },
+    { "name": "Coinvexity (Derivatives)", "xmlUrl": "https://coinvexity.substack.com/feed", "htmlUrl": "https://coinvexity.substack.com" },
+    { "name": "a16z Crypto", "xmlUrl": "https://a16zcrypto.substack.com/feed", "htmlUrl": "https://a16zcrypto.substack.com" },
+    { "name": "Jito Labs (Solana MEV)", "xmlUrl": "https://jito-labs.medium.com/feed", "htmlUrl": "https://jito-labs.medium.com" },
+    { "name": "Glassnode Insights", "xmlUrl": "https://insights.glassnode.com/rss/", "htmlUrl": "https://insights.glassnode.com" },
+    { "name": "Parallel Research (MEV)", "xmlUrl": "https://parallelresearch.substack.com/feed", "htmlUrl": "https://parallelresearch.substack.com" },
+    { "name": "Ethereum Foundation Blog", "xmlUrl": "https://blog.ethereum.org/en/feed.xml", "htmlUrl": "https://blog.ethereum.org" },
+    { "name": "Lido Blog (Validator MEV)", "xmlUrl": "https://blog.lido.fi/rss/", "htmlUrl": "https://blog.lido.fi" },
+    { "name": "Hummingbot", "xmlUrl": "https://medium.com/feed/hummingbot", "htmlUrl": "https://medium.com/hummingbot" }
+  ],
+
+  "categories": {
+    "mev-research":            { "emoji": "\ud83d\udd0d", "label": "MEV \u7814\u7a76" },
+    "funding-basis":           { "emoji": "\ud83d\udcb1", "label": "\u8cc7\u91d1\u8cbb\u7387/\u57fa\u5dee\u5957\u5229" },
+    "dex-arbitrage":           { "emoji": "\ud83d\udd04", "label": "DEX \u5957\u5229" },
+    "cross-exchange":          { "emoji": "\ud83c\udf10", "label": "\u8de8\u4ea4\u6613\u6240\u5957\u5229" },
+    "research-paper":          { "emoji": "\ud83d\udcda", "label": "\u5b78\u8853\u8ad6\u6587" },
+    "amm-design":              { "emoji": "\u2699\ufe0f", "label": "AMM \u8a2d\u8a08/\u6a5f\u5236" },
+    "liquidation-security":    { "emoji": "\ud83d\udee1\ufe0f", "label": "\u6e05\u7b97/\u5b89\u5168" },
+    "arb-tools":               { "emoji": "\ud83d\udee0\ufe0f", "label": "\u5957\u5229\u5de5\u5177" },
+    "other":                   { "emoji": "\ud83d\udcdd", "label": "\u5176\u4ed6" }
+  },
+
+  "prompts": {
+    "curatorRole": "你是一個加密貨幣套利研究策展人，專注於篩選與套利策略直接相關的高品質內容。你只關注：MEV 搜尋策略、資金費率套利、期現基差交易、跨交易所價差套利、DEX 三角套利、AMM 套利、清算機器人、閃電貸套利等主題。純新聞、價格預測、項目宣傳一律排除。",
+    "audience": "對加密貨幣套利策略研究者的價值：是否包含可量化的公式、模型、回測、程式碼、或學術研究方法",
+    "relevanceRubric": {
+      "score10": "直接描述套利策略的公式、模型、回測結果或實戰案例（如資金費率套利年化計算、MEV 搜尋演算法、DEX 套利路徑最佳化）",
+      "score7to9": "深入討論套利相關的市場微結構、AMM 設計缺陷、或衍生品定價異常，有量化分析",
+      "score4to6": "與套利間接相關的 DeFi 協議更新、交易所機制變更、或鏈上數據分析",
+      "score1to3": "一般性加密貨幣新聞、價格評論、與套利無直接關係的內容"
+    },
+    "categoryDescriptions": {
+      "mev-research": "MEV 提取策略、搜尋者分析、PBS 研究、三明治攻擊、區塊建構者經濟學",
+      "funding-basis": "永續合約資金費率套利、期貨基差交易、跨期套利、carry trade",
+      "dex-arbitrage": "DEX 三角套利、跨池套利、閃電貸套利、AMM 價差利用",
+      "cross-exchange": "CEX-CEX 價差套利、CEX-DEX 套利、跨鏈橋套利",
+      "research-paper": "學術論文、arXiv 預印本、統計套利研究、數學模型",
+      "amm-design": "AMM 定價機制、流動性池設計、無常損失分析、LP 策略",
+      "liquidation-security": "清算機器人策略、DeFi 漏洞利用分析、智能合約安全",
+      "arb-tools": "套利機器人框架、MEV 工具、鏈上監控、回測平台",
+      "other": "以上都不太適合的"
+    },
+    "keywordInstruction": "用英文，簡短，如 \"MEV\", \"funding rate\", \"basis trade\", \"flash loan\", \"arbitrage\", \"sandwich\", \"AMM\", \"liquidation\", \"searcher\"",
+    "summaryRole": "你是一個加密貨幣套利策略研究專家，熟悉 MEV、資金費率套利、基差交易、DEX 套利、閃電貸、AMM 機制設計。",
+    "summaryDomainHint": "套利策略名稱、DeFi 協議、衍生品術語、MEV 相關術語",
+    "highlightsDomain": "加密貨幣套利研究圈"
+  },
+
+  "report": {
+    "title": "# \ud83d\udd04 Crypto Arbitrage \u5957\u5229\u7814\u7a76\u65e5\u5831",
+    "subtitle": "> \u5c08\u6ce8 MEV\u3001\u8cc7\u91d1\u8cbb\u7387\u3001\u57fa\u5dee\u4ea4\u6613\u3001DEX \u5957\u5229\uff0cAI \u7cbe\u9078 Top {topN}",
+    "footerLines": [
+      "*Powered by [Quant-Radar](https://github.com/) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
+    ]
+  }
+}

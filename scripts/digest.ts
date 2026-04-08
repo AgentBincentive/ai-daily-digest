@@ -854,7 +854,7 @@ export function buildSummaryPrompt(
 
   return `${p.summaryRole}請為以下文章完成四件事：
 
-1. **中文標題** (titleZh): 將英文標題翻譯成自然的繁體中文。如果原標題已經是中文則保持不變。
+1. **中文標題** (titleZh): 必須將英文標題翻譯成自然的繁體中文，不可直接回傳英文原標題。如果原標題已經是中文則保持不變。翻譯時保留專有名詞（如 Bitcoin、Solana、DeFi）但句子結構必須是中文。
 2. **摘要** (summary): 4-6 句話的結構化摘要，讓讀者不點進原文也能了解核心內容。包含：
    - 文章討論的核心問題或主題（1 句）
    - 關鍵論點、技術方案或發現（2-3 句）
@@ -1231,8 +1231,12 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
       const medal = ['🥇', '🥈', '🥉'][i];
       const catMeta = profile.categories[a.category] || { emoji: '📝', label: a.category };
 
-      report += `${medal} **${a.titleZh || a.title}**\n\n`;
-      report += `[${a.title}](${a.link}) — ${a.sourceName} · ${humanizeTime(a.pubDate)} · ${catMeta.emoji} ${catMeta.label}\n\n`;
+      const titleDisplay = (a.titleZh && a.titleZh !== a.title) ? a.titleZh : a.title;
+      report += `${medal} **${titleDisplay}**\n\n`;
+      const linkLabel = (a.titleZh && a.titleZh !== a.title) ? a.title : '';
+      report += linkLabel
+        ? `[${linkLabel}](${a.link}) — ${a.sourceName} · ${humanizeTime(a.pubDate)} · ${catMeta.emoji} ${catMeta.label}\n\n`
+        : `[🔗 原文連結](${a.link}) — ${a.sourceName} · ${humanizeTime(a.pubDate)} · ${catMeta.emoji} ${catMeta.label}\n\n`;
       report += `> ${a.summary}\n\n`;
       if (a.reason) {
         report += `💡 **為什麼值得讀**: ${a.reason}\n\n`;
@@ -1288,8 +1292,12 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
       globalIndex++;
       const scoreTotal = a.scoreBreakdown.relevance + a.scoreBreakdown.quality + a.scoreBreakdown.timeliness;
 
-      report += `### ${globalIndex}. ${a.titleZh || a.title}\n\n`;
-      report += `[${a.title}](${a.link}) — **${a.sourceName}** · ${humanizeTime(a.pubDate)} · ⭐ ${scoreTotal}/30\n\n`;
+      const catTitleDisplay = (a.titleZh && a.titleZh !== a.title) ? a.titleZh : a.title;
+      report += `### ${globalIndex}. ${catTitleDisplay}\n\n`;
+      const catLinkLabel = (a.titleZh && a.titleZh !== a.title) ? a.title : '';
+      report += catLinkLabel
+        ? `[${catLinkLabel}](${a.link}) — **${a.sourceName}** · ${humanizeTime(a.pubDate)} · ⭐ ${scoreTotal}/30\n\n`
+        : `[🔗 原文連結](${a.link}) — **${a.sourceName}** · ${humanizeTime(a.pubDate)} · ⭐ ${scoreTotal}/30\n\n`;
       report += `> ${a.summary}\n\n`;
       if (a.keywords.length > 0) {
         report += `🏷️ ${a.keywords.join(', ')}\n\n`;
