@@ -289,7 +289,7 @@ async function fetchFeed(feed: { name: string; xmlUrl: string; htmlUrl: string }
     const response = await fetch(feed.xmlUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'AI-Daily-Digest/1.0 (RSS Reader)',
+        'User-Agent': 'Mozilla/5.0 (compatible; AI-Daily-Digest/1.0)',
         'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
       },
     });

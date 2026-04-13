@@ -21,8 +21,6 @@
     { "name": "Blocknative Blog", "xmlUrl": "https://www.blocknative.com/blog/rss.xml", "htmlUrl": "https://www.blocknative.com/blog" },
     { "name": "Vitalik Buterin", "xmlUrl": "https://vitalik.eth.limo/feed.xml", "htmlUrl": "https://vitalik.eth.limo" },
     { "name": "Chainalysis Blog", "xmlUrl": "https://www.chainalysis.com/feed/", "htmlUrl": "https://www.chainalysis.com/blog" },
-    { "name": "r/algotrading (arbitrage)", "xmlUrl": "https://www.reddit.com/r/algotrading/search.rss?q=crypto+arbitrage+OR+funding+rate+OR+basis+trade&restrict_sr=1&sort=new", "htmlUrl": "https://www.reddit.com/r/algotrading" },
-    { "name": "r/MEV", "xmlUrl": "https://www.reddit.com/r/MEV/.rss", "htmlUrl": "https://www.reddit.com/r/MEV" },
     { "name": "EigenPhi (MEV Analytics)", "xmlUrl": "https://eigenphi.substack.com/feed", "htmlUrl": "https://eigenphi.substack.com" },
     { "name": "HangukQuant Research", "xmlUrl": "https://www.research.hangukquant.com/feed", "htmlUrl": "https://www.research.hangukquant.com" },
     { "name": "1Token Blog", "xmlUrl": "https://blog.1token.tech/feed/", "htmlUrl": "https://blog.1token.tech" },
