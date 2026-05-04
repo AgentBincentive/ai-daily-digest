@@ -45,6 +45,8 @@ export interface DomainProfile {
   };
 
   report: {
+    skipMarketSnapshot?: boolean;
+    skipTradingAnalysis?: boolean;
     title: string;
     subtitle: string;
     footerLines: string[];
@@ -1188,7 +1190,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   lang: string;
 }, profile: DomainProfile, marketData?: MarketSnapshot): string {
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
+  const dateStr = now.toLocaleDateString('sv-SE');
 
   const subtitle = profile.report.subtitle
     .replace('{totalFeeds}', String(stats.totalFeeds))
@@ -1198,7 +1200,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   report += `${subtitle}\n\n`;
 
   // ── Market Snapshot ──
-  if (marketData) {
+  if (marketData && !profile.report.skipMarketSnapshot) {
     const lines = [];
     if (marketData.btc !== 'N/A') lines.push(`| BTC | ${marketData.btc} |`);
     if (marketData.eth !== 'N/A') lines.push(`| ETH | ${marketData.eth} |`);
@@ -1303,10 +1305,10 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
         report += `🏷️ ${a.keywords.join(', ')}\n\n`;
       }
       // Trading strategy section - star rating + link to deep analysis
-      if (a.trading && a.trading.stars >= 0) {
+      if (!profile.report.skipTradingAnalysis && a.trading && a.trading.stars >= 0) {
         const stars = a.trading.stars;
         const starDisplay = stars === 0 ? '☆☆☆☆☆ (0/5)' : '★'.repeat(stars) + '☆'.repeat(5 - stars) + ` (${stars}/5)`;
-        const analysisLink = `/analysis/${dateStr.replace(/-/g, '')}/${globalIndex}`;
+        const analysisLink = `/analysis/${profile.id}/${dateStr.replace(/-/g, '')}/${globalIndex}`;
         if (stars > 0) {
           report += `**交易可行性** ${starDisplay} 📊 [查看深度分析 →](${analysisLink})\n\n`;
         } else {
@@ -1318,8 +1320,10 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
   }
 
   // ── Footer ──
-  report += `> **⚠️ 免責聲明**：本報告中的交易策略建議由 AI 自動生成，僅供參考，不構成任何投資建議。交易加密貨幣、美股及衍生品具有高風險，可能導致全部本金損失。請讀者自行評估風險承受能力，並在做出任何交易決策前諮詢專業財務顧問。\n\n`;
-  report += `*產生於 ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | 掃描 ${stats.successFeeds} 源 → 取得 ${stats.totalArticles} 篇 → 精選 ${articles.length} 篇*\n`;
+  if (!profile.report.skipTradingAnalysis) {
+    report += `> **⚠️ 免責聲明**：本報告中的交易策略建議由 AI 自動生成，僅供參考，不構成任何投資建議。交易加密貨幣、美股及衍生品具有高風險，可能導致全部本金損失。請讀者自行評估風險承受能力，並在做出任何交易決策前諮詢專業財務顧問。\n\n`;
+  }
+  report += `*產生於 ${dateStr} ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} | 掃描 ${stats.successFeeds} 源 → 取得 ${stats.totalArticles} 篇 → 精選 ${articles.length} 篇*\n`;
   for (const line of profile.report.footerLines) {
     report += `${line}\n`;
   }
@@ -1438,6 +1442,13 @@ async function main(): Promise<void> {
   let filterKeywords: string[] = [];
   let excludeKeywords: string[] = [];
   const RADAR_PROJECT = '/Users/inezmac/Codes/break/quant-radar';
+  const SEMI_PROJECT = '/Users/inezmac/Codes/break/semi-radar';
+  const PROFILE_PROJECT_ROOTS: Record<string, string> = {
+    'quant-radar': RADAR_PROJECT,
+    'quant-factor': RADAR_PROJECT,
+    'semi-radar': SEMI_PROJECT,
+    'asic-radar': SEMI_PROJECT,
+  };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -1461,11 +1472,20 @@ async function main(): Promise<void> {
       filterKeywords = args[++i]!.split(',').map(k => k.trim().toLowerCase());
     } else if (arg === '--exclude' && args[i + 1]) {
       excludeKeywords = args[++i]!.split(',').map(k => k.trim().toLowerCase());
+    } else if (arg === '--profile-file' && args[i + 1]) {
+      profileName = `__file__:${args[++i]!}`;
     }
   }
 
   // ── Load profile ──
-  const profile = await loadProfile(profileName);
+  let profile: DomainProfile;
+  if (profileName.startsWith('__file__:')) {
+    const filePath = profileName.replace('__file__:', '');
+    const raw = await readFile(filePath, 'utf-8');
+    profile = JSON.parse(raw) as DomainProfile;
+  } else {
+    profile = await loadProfile(profileName);
+  }
   
   // ── Load config.json ──
   const CONFIG_PATH = `${homedir()}/.hn-daily-digest/config.json`;
@@ -1491,16 +1511,24 @@ async function main(): Promise<void> {
     // config doesn't exist or unreadable, continue with env vars
   }
 
-  // Load API keys from quant-radar .env as fallback (for shared access)
+  // Load API keys from profile's project .env, falling back to quant-radar's
+  // for shared keys (OPENAI/ANTHROPIC/GEMINI). Profile-specific .env wins.
+  const profileProjectRoot = PROFILE_PROJECT_ROOTS[profileName];
   let radarEnv: Record<string, string> = {};
-  if (profileName === 'quant-radar') {
+  const readEnvInto = async (path: string) => {
     try {
-      const envContent = await readFile(`${RADAR_PROJECT}/.env`, 'utf-8');
+      const envContent = await readFile(path, 'utf-8');
       for (const line of envContent.split('\n')) {
         const match = line.match(/^([A-Z_]+)=["']?(.+?)["']?\s*$/);
-        if (match) radarEnv[match[1]!] = match[2]!;
+        if (match && !radarEnv[match[1]!]) radarEnv[match[1]!] = match[2]!;
       }
     } catch { /* .env not found, skip */ }
+  };
+  if (profileProjectRoot) {
+    await readEnvInto(`${profileProjectRoot}/.env`);
+    if (profileProjectRoot !== RADAR_PROJECT) {
+      await readEnvInto(`${RADAR_PROJECT}/.env`);
+    }
   }
 
   // Priority: env vars > config.json > quant-radar .env
@@ -1525,10 +1553,10 @@ async function main(): Promise<void> {
   });
   
   if (!outputPath) {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = new Date().toLocaleDateString('sv-SE').replace(/-/g, '');
     const filterSuffix = filterKeywords.length > 0 ? `-${filterKeywords.join('+')}` : '';
-    if (profileName === 'quant-radar') {
-      outputPath = `${RADAR_PROJECT}/output/digest-${profileName}-${dateStr}${filterSuffix}.md`;
+    if (profileProjectRoot) {
+      outputPath = `${profileProjectRoot}/output/digest-${profileName}-${dateStr}${filterSuffix}.md`;
     } else {
       outputPath = `./digest-${profileName}-${dateStr}${filterSuffix}.md`;
     }
@@ -1572,17 +1600,18 @@ async function main(): Promise<void> {
   console.log(`[digest] Step 1/5: Fetching ${feeds.length} RSS feeds...`);
   const { articles: allArticles, errors: feedErrors } = await fetchAllFeeds(feeds);
 
-  // Auto-export and load Quant-Radar data if available
-  const radarFeedPath = `${RADAR_PROJECT}/output/radar-feed.json`;
-  const venvPython = `${RADAR_PROJECT}/.venv/bin/python`;
+  // Auto-export and load daemon-enhanced data from the profile's project if available
+  const daemonProject = profileProjectRoot || RADAR_PROJECT;
+  const radarFeedPath = `${daemonProject}/output/radar-feed.json`;
+  const venvPython = `${daemonProject}/.venv/bin/python`;
   try {
     // Auto-run export-digest to get fresh data from DB
     const { execSync } = await import('node:child_process');
     execSync(`${venvPython} main.py --export-digest --hours ${hours}`, {
-      cwd: RADAR_PROJECT,
+      cwd: daemonProject,
       stdio: 'pipe',
     });
-    console.log(`[digest] Auto-exported Quant-Radar DB (${hours}h)`);
+    console.log(`[digest] Auto-exported daemon DB from ${daemonProject} (${hours}h)`);
   } catch {
     // python/venv not available or main.py not found — skip
   }
@@ -1598,7 +1627,7 @@ async function main(): Promise<void> {
       sourceUrl: item.sourceUrl || item.link,
     }));
     allArticles.push(...radarArticles);
-    console.log(`[digest] Loaded ${radarArticles.length} articles from Quant-Radar (${radarFeedPath})`);
+    console.log(`[digest] Loaded ${radarArticles.length} articles from daemon (${radarFeedPath})`);
   } catch {
     // radar-feed.json not found — that's fine, skip silently
   }
@@ -1826,8 +1855,10 @@ async function main(): Promise<void> {
 
   // ── Error log ──
   if (feedErrors.length > 0) {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const errorLogPath = `${dirname(outputPath)}/digest-${profileName}-${dateStr}-errors.log`;
+    // Derive from outputPath, not profileName: when --profile-file is used,
+    // profileName becomes "__file__:/abs/path/to/tmp.json" and embeds slashes,
+    // which would make writeFile ENOENT and crash the whole run.
+    const errorLogPath = `${outputPath.replace(/\.md$/, '')}-errors.log`;
     const errorLogContent = feedErrors
       .map(e => `[${e.feedName}] ${e.feedUrl} — ${e.message}`)
       .join('\n');
