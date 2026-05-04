@@ -1,0 +1,92 @@
+{
+  "id": "semi-radar",
+  "name": "半導體產業情報雷達",
+  "description": "聚焦晶圓代工、先進封裝、AI 晶片、記憶體、設備材料、供應鏈與產業政策的每日情報摘要",
+
+  "feeds": [
+    { "name": "EE Times", "xmlUrl": "https://www.eetimes.com/feed/", "htmlUrl": "https://www.eetimes.com" },
+    { "name": "EDN Network", "xmlUrl": "https://www.edn.com/feed/", "htmlUrl": "https://www.edn.com" },
+    { "name": "Semiconductor Engineering", "xmlUrl": "https://semiengineering.com/feed/", "htmlUrl": "https://semiengineering.com" },
+    { "name": "AnandTech", "xmlUrl": "https://www.anandtech.com/rss/", "htmlUrl": "https://www.anandtech.com" },
+    { "name": "Tom's Hardware", "xmlUrl": "https://www.tomshardware.com/feeds/all", "htmlUrl": "https://www.tomshardware.com" },
+    { "name": "The Register (On-Prem)", "xmlUrl": "https://www.theregister.com/on_prem/hpc/headlines.atom", "htmlUrl": "https://www.theregister.com" },
+    { "name": "SemiWiki", "xmlUrl": "https://semiwiki.com/feed/", "htmlUrl": "https://semiwiki.com" },
+    { "name": "Electronics Weekly", "xmlUrl": "https://www.electronicsweekly.com/feed/", "htmlUrl": "https://www.electronicsweekly.com" },
+
+    { "name": "SemiAnalysis", "xmlUrl": "https://www.semianalysis.com/feed", "htmlUrl": "https://www.semianalysis.com" },
+    { "name": "Fabricated Knowledge (Doug O'Laughlin)", "xmlUrl": "https://www.fabricatedknowledge.com/feed", "htmlUrl": "https://www.fabricatedknowledge.com" },
+    { "name": "Asianometry (Jon Y)", "xmlUrl": "https://asianometry.substack.com/feed", "htmlUrl": "https://asianometry.substack.com" },
+    { "name": "Chip War Daily", "xmlUrl": "https://chipwar.substack.com/feed", "htmlUrl": "https://chipwar.substack.com" },
+    { "name": "Yole Group", "xmlUrl": "https://www.yolegroup.com/feed/", "htmlUrl": "https://www.yolegroup.com" },
+    { "name": "VLSI Research", "xmlUrl": "https://www.vlsiresearch.com/feed", "htmlUrl": "https://www.vlsiresearch.com" },
+    { "name": "SemiMedia (中文)", "xmlUrl": "https://www.semimedia.cc/feed", "htmlUrl": "https://www.semimedia.cc" },
+
+    { "name": "arXiv cs.AR (Hardware Arch)", "xmlUrl": "https://export.arxiv.org/rss/cs.AR", "htmlUrl": "https://arxiv.org/list/cs.AR/recent" },
+    { "name": "arXiv cs.ET (Emerging Tech)", "xmlUrl": "https://export.arxiv.org/rss/cs.ET", "htmlUrl": "https://arxiv.org/list/cs.ET/recent" },
+    { "name": "arXiv eess.SP (Signal Processing)", "xmlUrl": "https://export.arxiv.org/rss/eess.SP", "htmlUrl": "https://arxiv.org/list/eess.SP/recent" },
+    { "name": "arXiv cond-mat.mes-hall", "xmlUrl": "https://export.arxiv.org/rss/cond-mat.mes-hall", "htmlUrl": "https://arxiv.org/list/cond-mat.mes-hall/recent" },
+
+    { "name": "TrendForce News", "xmlUrl": "https://www.trendforce.com/news/feed", "htmlUrl": "https://www.trendforce.com" },
+    { "name": "DigiTimes Asia", "xmlUrl": "https://www.digitimes.com/rss/daily.xml", "htmlUrl": "https://www.digitimes.com" },
+    { "name": "SIA (Semiconductor Industry Assoc.)", "xmlUrl": "https://www.semiconductors.org/feed/", "htmlUrl": "https://www.semiconductors.org" },
+
+    { "name": "Bloomberg Technology", "xmlUrl": "https://feeds.bloomberg.com/technology/news.rss", "htmlUrl": "https://www.bloomberg.com/technology" },
+    { "name": "Nikkei Asia Tech", "xmlUrl": "https://asia.nikkei.com/rss/feed/nar", "htmlUrl": "https://asia.nikkei.com/Business/Tech" },
+    { "name": "Seeking Alpha Tech", "xmlUrl": "https://seekingalpha.com/sector/technology.xml", "htmlUrl": "https://seekingalpha.com/sector/technology" }
+  ],
+
+  "categories": {
+    "advanced-node":         { "emoji": "\ud83c\udfed", "label": "\u5148\u9032\u88fd\u7a0b" },
+    "advanced-packaging":    { "emoji": "\ud83d\udce6", "label": "\u5148\u9032\u5c01\u88dd" },
+    "ai-chip":               { "emoji": "\ud83e\udd16", "label": "AI \u6676\u7247" },
+    "memory":                { "emoji": "\ud83d\udcbe", "label": "\u8a18\u61b6\u9ad4" },
+    "ic-design":             { "emoji": "\ud83d\udcd0", "label": "IC \u8a2d\u8a08" },
+    "equipment-material":    { "emoji": "\u2699\ufe0f",  "label": "\u8a2d\u5099 & \u6750\u6599" },
+    "automotive-power":      { "emoji": "\ud83d\ude97", "label": "\u8eca\u7528 & \u529f\u7387" },
+    "supply-chain":          { "emoji": "\ud83d\udcca", "label": "\u4f9b\u61c9\u93c8\u52d5\u614b" },
+    "earnings-outlook":      { "emoji": "\ud83d\udcb0", "label": "\u8ca1\u5831 & \u5c55\u671b" },
+    "policy-geopolitics":    { "emoji": "\ud83c\udfdb\ufe0f", "label": "\u653f\u7b56 & \u5730\u7de3" },
+    "display-optical":       { "emoji": "\ud83d\udda5\ufe0f", "label": "\u5149\u96fb & \u986f\u793a" },
+    "emerging-tech":         { "emoji": "\ud83d\udd2c", "label": "\u91cf\u5b50 & \u65b0\u8208\u6280\u8853" }
+  },
+
+  "prompts": {
+    "curatorRole": "你是資深半導體產業分析師，熟悉晶圓代工、先進封裝、AI 晶片、記憶體、設備材料、車用功率、供應鏈動態與地緣政策。你能判斷一篇資訊是否包含：新技術節點突破、產能／良率變化、重大客戶轉單、併購、財報展望、或技術內幕。純 PR 稿、消費性電子評測、加密貨幣／NFT 類內容一律排除。",
+    "audience": "對先進製程、封裝技術、AI 晶片架構、供應鏈上下游關係與產業投資機會有深度興趣的產業分析師與投資人：是否包含具體技術節點（2nm、GAA、CoWoS）、公司（TSMC、NVIDIA、ASML…）、數據（產能、良率、營收、capex）或政策影響",
+    "relevanceRubric": {
+      "score10": "重大事件 + 具體數據（產能調整、良率突破、併購、技術突破、重大客戶轉單、政策突發）",
+      "score7to9": "重要技術節點或供應鏈動態 + 具體公司／產品線的分析；深入的技術拆解或財報解讀",
+      "score4to6": "通論性產業趨勢、消息摘要、或學術預印本，缺乏具體數據或深度解讀",
+      "score1to3": "PR 稿、消費性電子評測、無關 tech／加密／政治爭議等噪音"
+    },
+    "categoryDescriptions": {
+      "advanced-node": "2nm / 3nm / GAA / FinFET / EUV / high-NA EUV / backside power / DTCO 等前沿製程技術與良率",
+      "advanced-packaging": "CoWoS / InFO / EMIB / Foveros / chiplet / UCIe / hybrid bonding / 3D IC 等先進封裝與異質整合",
+      "ai-chip": "GPU / TPU / NPU / AI accelerator / HBM 整合 / training / inference / 大模型專用晶片",
+      "memory": "HBM3E / HBM4 / DDR5 / LPDDR / NAND / 3D NAND / MRAM / CXL memory / 記憶體價格循環",
+      "ic-design": "SoC / ASIC / FPGA / RISC-V / ARM / EDA 工具 / tapeout 消息 / IP 授權",
+      "equipment-material": "lithography / etching / deposition / photoresist / silicon wafer / SOI / ASML / AMAT / LAM / TEL 等設備材料商動態",
+      "automotive-power": "ADAS / SiC / GaN / power semiconductor / IGBT / automotive MCU / EV 晶片",
+      "supply-chain": "產能利用率、wafer start、lead time、庫存水位、ASP 變動、大客戶轉單",
+      "earnings-outlook": "營收、毛利率、guidance、capex 指引、法說重點、產業循環判讀",
+      "policy-geopolitics": "CHIPS Act、美中科技戰、出口管制、entity list、補貼政策、關稅",
+      "display-optical": "Micro LED、OLED、mini LED、display driver IC、光電元件",
+      "emerging-tech": "量子運算、photonic IC、neuromorphic、spintronics、2D material 等新興半導體研究"
+    },
+    "keywordInstruction": "用英文或原文公司名／技術節點，簡短：如 \"TSMC\", \"CoWoS\", \"HBM3E\", \"2nm\", \"GAA\", \"ASML\", \"EUV\", \"CHIPS Act\", \"export control\", \"capex\", \"yield\", \"chiplet\", \"RISC-V\"",
+    "summaryRole": "你是一位資深半導體產業研究員，熟悉晶圓代工、先進封裝、AI 晶片、記憶體、設備材料的技術術語與產業脈絡，能用中文向台灣投資人／分析師清楚表達重點。",
+    "summaryDomainHint": "技術節點名稱、封裝技術、公司代號、供應鏈用語（ASP、yield、capex、lead time）、政策名稱（CHIPS Act、EAR、entity list）",
+    "highlightsDomain": "半導體產業情報圈"
+  },
+
+  "report": {
+    "skipMarketSnapshot": true,
+    "skipTradingAnalysis": true,
+    "title": "# \ud83d\udcf1 \u534a\u5c0e\u9ad4\u7522\u696d\u60c5\u5831\u96f7\u9054",
+    "subtitle": "> \u5f9e {totalFeeds} \u500b\u4f86\u6e90\u7cbe\u9078 {topN} \u7bc7\u534a\u5c0e\u9ad4\u76f8\u95dc\u60c5\u5831",
+    "footerLines": [
+      "*\u672c\u5831\u544a\u50c5\u4f5c\u7522\u696d\u53c3\u8003\uff0c\u4e0d\u69cb\u6210\u6295\u8cc7\u5efa\u8b70*",
+      "*Powered by [Semi-Radar](https://semicon.quantradar.cc) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
+    ]
+  }
+}

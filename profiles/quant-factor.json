@@ -1,0 +1,88 @@
+{
+  "id": "quant-factor",
+  "name": "因子 & Alpha 研究日報",
+  "description": "聚焦量化因子、alpha 分解、因子輪動與回測方法論的每日研究摘要",
+
+  "feeds": [
+    { "name": "arXiv q-fin", "xmlUrl": "https://export.arxiv.org/rss/q-fin", "htmlUrl": "https://arxiv.org/list/q-fin/recent" },
+    { "name": "arXiv q-fin.PM (Portfolio)", "xmlUrl": "https://arxiv.org/rss/q-fin.PM", "htmlUrl": "https://arxiv.org/list/q-fin.PM/recent" },
+    { "name": "arXiv q-fin.ST (Stat Finance)", "xmlUrl": "https://arxiv.org/rss/q-fin.ST", "htmlUrl": "https://arxiv.org/list/q-fin.ST/recent" },
+    { "name": "arXiv q-fin.RM (Risk Mgmt)", "xmlUrl": "https://arxiv.org/rss/q-fin.RM", "htmlUrl": "https://arxiv.org/list/q-fin.RM/recent" },
+    { "name": "arXiv q-fin.TR (Trading)", "xmlUrl": "https://arxiv.org/rss/q-fin.TR", "htmlUrl": "https://arxiv.org/list/q-fin.TR/recent" },
+    { "name": "arXiv stat.ML (ML in Finance)", "xmlUrl": "https://arxiv.org/rss/stat.ML", "htmlUrl": "https://arxiv.org/list/stat.ML/recent" },
+
+    { "name": "AQR Insights", "xmlUrl": "https://www.aqr.com/Insights/Research/feed", "htmlUrl": "https://www.aqr.com/Insights/Research" },
+    { "name": "Quantpedia", "xmlUrl": "https://quantpedia.com/feed/", "htmlUrl": "https://quantpedia.com" },
+    { "name": "Two Sigma Insights", "xmlUrl": "https://www.twosigma.com/feed/", "htmlUrl": "https://www.twosigma.com/insights" },
+    { "name": "Robeco Insights", "xmlUrl": "https://www.robeco.com/en/insights/index.rss", "htmlUrl": "https://www.robeco.com/en/insights" },
+    { "name": "Research Affiliates", "xmlUrl": "https://www.researchaffiliates.com/publications.feed", "htmlUrl": "https://www.researchaffiliates.com/publications" },
+    { "name": "Finominal (Rabener)", "xmlUrl": "https://finominal.com/feed/", "htmlUrl": "https://finominal.com" },
+    { "name": "Verdad Research", "xmlUrl": "https://verdadcap.com/archive?format=rss", "htmlUrl": "https://verdadcap.com/archive" },
+    { "name": "Meb Faber Research", "xmlUrl": "https://mebfaber.com/feed/", "htmlUrl": "https://mebfaber.com" },
+    { "name": "Capital Spectator", "xmlUrl": "https://www.capitalspectator.com/feed/", "htmlUrl": "https://www.capitalspectator.com" },
+    { "name": "Klement on Investing", "xmlUrl": "https://klementoninvesting.substack.com/feed", "htmlUrl": "https://klementoninvesting.substack.com" },
+    { "name": "QuantInsti Blog", "xmlUrl": "https://blog.quantinsti.com/feed/", "htmlUrl": "https://blog.quantinsti.com" },
+
+    { "name": "Alpha Architect", "xmlUrl": "https://alphaarchitect.com/feed/", "htmlUrl": "https://alphaarchitect.com" },
+    { "name": "QuantStart", "xmlUrl": "https://www.quantstart.com/feed/", "htmlUrl": "https://www.quantstart.com" },
+    { "name": "Ernie Chan (Epchan)", "xmlUrl": "http://epchan.blogspot.com/feeds/posts/default", "htmlUrl": "http://epchan.blogspot.com" },
+    { "name": "Flirting with Models (Newfound)", "xmlUrl": "https://blog.thinknewfound.com/feed/", "htmlUrl": "https://blog.thinknewfound.com" },
+    { "name": "Quantocracy", "xmlUrl": "https://quantocracy.com/feed/", "htmlUrl": "https://quantocracy.com" },
+    { "name": "HangukQuant Research", "xmlUrl": "https://www.research.hangukquant.com/feed", "htmlUrl": "https://www.research.hangukquant.com" },
+    { "name": "Harbourfront Quant", "xmlUrl": "https://harbourfrontquant.substack.com/feed", "htmlUrl": "https://harbourfrontquant.substack.com" },
+
+    { "name": "Messari Research", "xmlUrl": "https://messari.io/feed", "htmlUrl": "https://messari.io/research" },
+    { "name": "Amberdata Blog", "xmlUrl": "https://blog.amberdata.io/rss.xml", "htmlUrl": "https://blog.amberdata.io" },
+    { "name": "Coin Metrics State of the Network", "xmlUrl": "https://coinmetrics.substack.com/feed", "htmlUrl": "https://coinmetrics.substack.com" },
+    { "name": "arXiv cs.CR (DeFi/MEV)", "xmlUrl": "https://arxiv.org/rss/cs.CR", "htmlUrl": "https://arxiv.org/list/cs.CR/recent" },
+    { "name": "Flashbots Writings", "xmlUrl": "https://writings.flashbots.net/rss.xml", "htmlUrl": "https://writings.flashbots.net" }
+  ],
+
+  "categories": {
+    "factor-research":        { "emoji": "\ud83e\uddec", "label": "\u56e0\u5b50\u7814\u7a76" },
+    "alpha-decomposition":    { "emoji": "\ud83d\udd2c", "label": "Alpha \u5206\u89e3" },
+    "factor-rotation":        { "emoji": "\ud83d\udd04", "label": "\u56e0\u5b50\u8f2a\u52d5" },
+    "backtest-methodology":   { "emoji": "\ud83d\udcd0", "label": "\u56de\u6e2c\u65b9\u6cd5\u8ad6" },
+    "risk-premia":            { "emoji": "\ud83d\udcb0", "label": "\u98a8\u96aa\u6ea2\u916c" },
+    "ml-quant":               { "emoji": "\ud83e\udd16", "label": "\u6a5f\u5668\u5b78\u7fd2\u91cf\u5316" },
+    "portfolio-construction": { "emoji": "\ud83e\uddee", "label": "\u7d44\u5408\u5efa\u69cb" },
+    "crypto-factor":          { "emoji": "\ud83e\ude99", "label": "\u52a0\u5bc6\u56e0\u5b50" },
+    "academic-finding":       { "emoji": "\ud83d\udcda", "label": "\u5b78\u8853\u65b0\u767c\u73fe" }
+  },
+
+  "prompts": {
+    "curatorRole": "你是資深量化研究員，專精因子投資、Alpha 發掘與組合建構。你能判斷一篇研究是否提供新的因子、新的回測洞察，或可落地的策略改良。你只關注：新因子發現、因子暴露分析、alpha 衰減、因子輪動、回測方法、風險溢酬、機器學習量化、組合建構、加密因子等主題。純市場評論、價格預測、項目宣傳一律排除。",
+    "audience": "對多因子模型、因子暴露、alpha 衰減、因子輪動與 ML 量化有深度興趣的量化研究員與交易員：是否包含可量化的公式、IC/IR 指標、Sharpe 比率、回測結果、程式碼或學術研究方法",
+    "relevanceRubric": {
+      "score10": "新因子或新 alpha 發現 + 有公式/code/回測數據（如 IC、IR、Sharpe、alpha 衰減曲線、因子相關性矩陣）",
+      "score7to9": "既有因子的新視角、交叉驗證、或機器學習延伸；深入討論回測方法論或組合建構技術",
+      "score4to6": "通論性的因子討論、風險溢酬回顧、或學術文獻整理，缺乏具體量化結果",
+      "score1to3": "僅市場評論、價格預測、項目宣傳，無量化內容"
+    },
+    "categoryDescriptions": {
+      "factor-research": "新因子發現、因子有效性檢驗、因子衰減分析、因子稀疏化、跨市場因子",
+      "alpha-decomposition": "Alpha 來源分解、風險歸因、純 alpha 萃取、Brinson 歸因",
+      "factor-rotation": "因子輪動策略、Regime-switching、因子動能、因子擇時",
+      "backtest-methodology": "樣本外驗證、walk-forward、過擬合檢測、交易成本模型、滑價建模",
+      "risk-premia": "股票/債券/商品風險溢酬、Fama-French、Carhart、價值/動能/品質因子、carry trade",
+      "ml-quant": "機器學習因子發掘、深度學習回測、Gradient Boosting、NN 訓練、特徵工程",
+      "portfolio-construction": "Black-Litterman、風險平價、均值變異數、Kelly、組合最佳化、流動性約束",
+      "crypto-factor": "加密貨幣因子研究、on-chain 因子、鏈上動能、跨交易所因子、DeFi 流動性因子",
+      "academic-finding": "arXiv 論文、SSRN 預印本、學術期刊新發現，以上類別都不貼切的學術研究"
+    },
+    "keywordInstruction": "用英文，簡短，如 \"alpha\", \"factor\", \"risk premium\", \"Sharpe\", \"IC\", \"IR\", \"backtest\", \"regime\", \"momentum\", \"value\", \"quality\", \"cross-section\", \"machine learning\", \"portfolio\"",
+    "summaryRole": "你是一個量化因子研究專家，熟悉多因子模型、alpha 分解、因子輪動、回測方法論、機器學習量化、Fama-French/Carhart 架構。",
+    "summaryDomainHint": "因子名稱、alpha 術語、IC/IR 指標、回測統計量、組合最佳化方法",
+    "highlightsDomain": "量化因子與 Alpha 研究圈"
+  },
+
+  "report": {
+    "skipMarketSnapshot": true,
+    "title": "# \ud83e\uddec \u56e0\u5b50 & Alpha \u7814\u7a76\u65e5\u5831",
+    "subtitle": "> \u5f9e {totalFeeds} \u500b\u4f86\u6e90\u7cbe\u9078 {topN} \u7bc7\u56e0\u5b50\u8207 alpha \u76f8\u95dc\u7814\u7a76",
+    "footerLines": [
+      "*\u672c\u5831\u544a\u50c5\u4f5c\u7814\u7a76\u53c3\u8003\uff0c\u4e0d\u69cb\u6210\u6295\u8cc7\u5efa\u8b70*",
+      "*Powered by [Quant-Radar](https://github.com/) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
+    ]
+  }
+}

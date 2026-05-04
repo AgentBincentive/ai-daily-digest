@@ -1,0 +1,72 @@
+{
+  "id": "asic-radar",
+  "name": "AI 晶片雷達",
+  "description": "聚焦 AI 加速器、hyperscaler 自研 ASIC、HBM/CoWoS 供應鏈、AI infra 評論、邊緣推論晶片與出口管制",
+
+  "feeds": [
+    { "name": "NVIDIA Blog", "xmlUrl": "https://blogs.nvidia.com/feed/", "htmlUrl": "https://blogs.nvidia.com" },
+    { "name": "AMD Community", "xmlUrl": "https://community.amd.com/t5/community/blog-rss/blog-id/community", "htmlUrl": "https://community.amd.com" },
+
+    { "name": "AWS Machine Learning Blog", "xmlUrl": "https://aws.amazon.com/blogs/machine-learning/feed/", "htmlUrl": "https://aws.amazon.com/blogs/machine-learning" },
+    { "name": "Google Cloud AI/ML Blog", "xmlUrl": "https://cloud.google.com/blog/products/ai-machine-learning/rss", "htmlUrl": "https://cloud.google.com/blog/products/ai-machine-learning" },
+    { "name": "Meta Engineering", "xmlUrl": "https://engineering.fb.com/feed/", "htmlUrl": "https://engineering.fb.com" },
+
+    { "name": "Groq", "xmlUrl": "https://groq.com/feed/", "htmlUrl": "https://groq.com" },
+
+    { "name": "The Next Platform", "xmlUrl": "https://www.nextplatform.com/feed/", "htmlUrl": "https://www.nextplatform.com" },
+    { "name": "ServeTheHome", "xmlUrl": "https://www.servethehome.com/feed/", "htmlUrl": "https://www.servethehome.com" },
+
+    { "name": "Chips and Cheese", "xmlUrl": "https://chipsandcheese.com/feed/", "htmlUrl": "https://chipsandcheese.com" },
+    { "name": "More Than Moore", "xmlUrl": "https://morethanmoore.substack.com/feed", "htmlUrl": "https://morethanmoore.substack.com" },
+    { "name": "Latent Space", "xmlUrl": "https://www.latent.space/feed", "htmlUrl": "https://www.latent.space" },
+    { "name": "Import AI", "xmlUrl": "https://importai.substack.com/feed", "htmlUrl": "https://importai.substack.com" },
+
+    { "name": "The Verge AI", "xmlUrl": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "htmlUrl": "https://www.theverge.com/ai-artificial-intelligence" },
+    { "name": "The Register AI/ML", "xmlUrl": "https://www.theregister.com/software/ai_ml/headlines.atom", "htmlUrl": "https://www.theregister.com/software/ai_ml" },
+
+    { "name": "arXiv cs.AR (Hardware Arch)", "xmlUrl": "https://export.arxiv.org/rss/cs.AR", "htmlUrl": "https://arxiv.org/list/cs.AR/recent" }
+  ],
+
+  "categories": {
+    "ai-accelerator":     { "emoji": "🤖", "label": "AI 加速器" },
+    "custom-asic":        { "emoji": "🏭", "label": "自研 ASIC" },
+    "hbm-package":        { "emoji": "📦", "label": "HBM · CoWoS" },
+    "ai-infra":           { "emoji": "🏢", "label": "AI Infra" },
+    "edge-inference":     { "emoji": "⚡",       "label": "邊緣 · 推論" },
+    "policy-export":      { "emoji": "🏛️", "label": "出口管制 · 地緣" }
+  },
+
+  "prompts": {
+    "curatorRole": "你是專注於 AI 晶片產業的資深分析師。你只關心：(1) AI 加速器晶片的新發表、規格、benchmark；(2) hyperscaler（AWS/Google/Meta/Microsoft）自研 ASIC 動態；(3) HBM、CoWoS、先進封裝中與 AI 晶片直接相關的供應鏈動態；(4) AI 資料中心 infra、scaling 戰略評論；(5) 邊緣推論晶片與 AI 晶片新創（Cerebras、Tenstorrent、Groq、SambaNova、Lightmatter、Etched 等）；(6) AI 晶片出口管制、地緣政治。明確排除：消費級 GPU 遊戲評測、PC DIY 組裝、純 AI 軟體模型發布而無硬體角度、加密貨幣挖礦、純財報數字無 AI 戰略意涵。",
+    "audience": "AI 晶片產業分析師、資料中心架構師、半導體投資人，關心：具體晶片型號（H100、B200、TPU v5p、MI300X、Trainium2）、自研 ASIC 進度、HBM3E/4 採用、CoWoS 產能、超大客戶設計贏單（design win）、AI infra 戰略決策。",
+    "relevanceRubric": {
+      "score10": "重大 AI 晶片事件 + 具體規格／數據（新世代 GPU/ASIC 發表、自研晶片首次披露、HBM 供應鏈重大轉折、出口管制突發）",
+      "score7to9": "AI 加速器規格分析、hyperscaler 自研進度、HBM/CoWoS 供應鏈動態、AI infra 戰略評論、邊緣推論晶片新創動態",
+      "score4to6": "通論性 AI 硬體趨勢、學術預印本（cs.AR）、無具體公司／規格的 AI infra 觀點文章",
+      "score1to3": "消費級 GPU 評測、PC DIY、純 AI 軟體模型發布、加密、無 AI 角度的一般科技新聞"
+    },
+    "categoryDescriptions": {
+      "ai-accelerator": "NVIDIA H100/H200/B200/B300、AMD MI300X/MI325X/MI350、Intel Gaudi、通用 GPU/NPU 加速器",
+      "custom-asic": "AWS Trainium/Inferentia、Google TPU v5/v6/Axion、Meta MTIA、Microsoft Maia/Cobalt、Apple Neural Engine 等 hyperscaler 自研晶片",
+      "hbm-package": "HBM3E/HBM4 供應鏈（SK Hynix、Samsung、Micron）、CoWoS-S/L 產能、3D IC、chiplet、UCIe，特指與 AI 晶片直接相關者",
+      "ai-infra": "AI 資料中心架構、機架系統（NVL72、GB300）、scaling laws、AI infra 戰略、訓練/推論成本分析",
+      "edge-inference": "邊緣 AI 晶片、推論 ASIC、AI 新創（Cerebras、Tenstorrent、Groq、SambaNova、Lightmatter、Etched、Rain AI）",
+      "policy-export": "美國對中 AI 晶片出口管制、entity list、AI Diffusion Rule、晶片地緣政治"
+    },
+    "keywordInstruction": "用英文或原文晶片型號與公司名，簡短：如 \"H100\", \"B200\", \"MI300X\", \"TPU v5p\", \"Trainium2\", \"MTIA\", \"HBM3E\", \"CoWoS-L\", \"NVLink\", \"chiplet\", \"export control\"",
+    "summaryRole": "你是資深 AI 晶片產業研究員，熟悉 GPU/ASIC 架構、HBM 供應鏈、hyperscaler 自研進度、AI infra 戰略，能用中文向台灣投資人與晶片產業從業者清楚表達重點。",
+    "summaryDomainHint": "晶片型號、HBM 世代、CoWoS 變體、hyperscaler 自研晶片代號、AI infra 術語（scaling、TCO、tokens/sec/$）",
+    "highlightsDomain": "AI 晶片產業圈"
+  },
+
+  "report": {
+    "skipMarketSnapshot": true,
+    "skipTradingAnalysis": true,
+    "title": "# 🤖 AI 晶片雷達",
+    "subtitle": "> 從 {totalFeeds} 個 AI 晶片專門來源精選 {topN} 篇",
+    "footerLines": [
+      "*本報告僅作產業參考，不構成投資建議*",
+      "*Powered by [Semi-Radar](https://semicon.quantradar.cc) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
+    ]
+  }
+}
