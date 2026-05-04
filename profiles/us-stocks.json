@@ -1,0 +1,77 @@
+{
+  "id": "us-stocks",
+  "name": "美股日報",
+  "description": "聚焦美股盤勢、財報、個股動態，加上 AI、半導體、醫藥／生技、軍工／航太國防 4 大類股，AI 精選 Top 15。",
+
+  "feeds": [
+    { "name": "MarketWatch Top Stories",         "xmlUrl": "https://feeds.marketwatch.com/marketwatch/topstories",                                              "htmlUrl": "https://www.marketwatch.com" },
+    { "name": "CNBC Top News",                   "xmlUrl": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147",            "htmlUrl": "https://www.cnbc.com" },
+    { "name": "CNBC US News & Analysis",         "xmlUrl": "https://www.cnbc.com/id/100003114/device/rss/rss.html",                                            "htmlUrl": "https://www.cnbc.com/us-top-news-and-analysis/" },
+    { "name": "CNBC Investing/Markets",          "xmlUrl": "https://www.cnbc.com/id/15839069/device/rss/rss.html",                                             "htmlUrl": "https://www.cnbc.com/investing/" },
+    { "name": "WSJ Markets",                     "xmlUrl": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",                                                    "htmlUrl": "https://www.wsj.com/news/markets" },
+    { "name": "Seeking Alpha Market Currents",   "xmlUrl": "https://seekingalpha.com/market_currents.xml",                                                     "htmlUrl": "https://seekingalpha.com" },
+    { "name": "Investor's Business Daily",       "xmlUrl": "https://www.investors.com/feed/",                                                                  "htmlUrl": "https://www.investors.com" },
+    { "name": "Investing.com Stock Markets",     "xmlUrl": "https://www.investing.com/rss/news_25.rss",                                                        "htmlUrl": "https://www.investing.com" },
+    { "name": "Benzinga",                        "xmlUrl": "https://www.benzinga.com/feed",                                                                    "htmlUrl": "https://www.benzinga.com" },
+    { "name": "The Motley Fool",                 "xmlUrl": "https://www.fool.com/a/feeds/foolwatch?apikey=foolwatch-feed",                                     "htmlUrl": "https://www.fool.com" },
+
+    { "name": "SEC EDGAR 8-K Filings",           "xmlUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom",                  "htmlUrl": "https://www.sec.gov" },
+    { "name": "Federal Reserve Press Releases",  "xmlUrl": "https://www.federalreserve.gov/feeds/press_all.xml",                                               "htmlUrl": "https://www.federalreserve.gov" },
+
+    { "name": "TechCrunch AI",                   "xmlUrl": "https://techcrunch.com/category/artificial-intelligence/feed/",                                    "htmlUrl": "https://techcrunch.com/category/artificial-intelligence/" },
+    { "name": "MIT Technology Review",           "xmlUrl": "https://www.technologyreview.com/feed/",                                                           "htmlUrl": "https://www.technologyreview.com" },
+
+    { "name": "Tom's Hardware",                  "xmlUrl": "https://www.tomshardware.com/feeds/all",                                                           "htmlUrl": "https://www.tomshardware.com" },
+    { "name": "Wccftech",                        "xmlUrl": "https://wccftech.com/feed/",                                                                       "htmlUrl": "https://wccftech.com" },
+    { "name": "SemiWiki",                        "xmlUrl": "https://semiwiki.com/feed/",                                                                       "htmlUrl": "https://semiwiki.com" },
+
+    { "name": "STAT News",                       "xmlUrl": "https://www.statnews.com/feed/",                                                                   "htmlUrl": "https://www.statnews.com" },
+    { "name": "Endpoints News",                  "xmlUrl": "https://endpts.com/feed/",                                                                         "htmlUrl": "https://endpts.com" },
+    { "name": "BioPharma Dive",                  "xmlUrl": "https://www.biopharmadive.com/feeds/news/",                                                        "htmlUrl": "https://www.biopharmadive.com" },
+
+    { "name": "Defense News",                    "xmlUrl": "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml",                               "htmlUrl": "https://www.defensenews.com" },
+    { "name": "Breaking Defense",                "xmlUrl": "https://breakingdefense.com/feed/",                                                                "htmlUrl": "https://breakingdefense.com" }
+  ],
+
+  "categories": {
+    "market-action":     { "emoji": "📈", "label": "大盤／財報／個股動態" },
+    "ai-tech":           { "emoji": "🤖", "label": "AI 人工智慧" },
+    "semiconductors":    { "emoji": "🔧", "label": "半導體" },
+    "pharma":            { "emoji": "💊", "label": "醫藥／生技" },
+    "aerospace-defense": { "emoji": "🚀", "label": "軍工／航太國防" },
+    "other":             { "emoji": "📰", "label": "其他美股" }
+  },
+
+  "prompts": {
+    "curatorRole": "你是一位美股研究策展人，專注於美股盤勢、個股財報與股價動態，並涵蓋 AI、半導體、醫藥／生技、軍工／航太國防 4 大類股。優先挑選對 NYSE／Nasdaq 上市公司股價有直接驅動力的事件。",
+    "audience": "美股投資人，關心當日大盤異動、個股財報、分析師升降評、M&A、Fed 決策，以及四大類股的產業動態",
+    "relevanceRubric": {
+      "score10": "直接驅動股價的重大事件 — Mag 7 財報意外、Fed 決議、突破性 FDA 決定、國防大單、重大 M&A、指數崩盤／單股暴漲暴跌",
+      "score7to9": "個股財報、分析師升降評、ticker 級別的產業政策影響、產業鏈變化牽動具體美股",
+      "score4to6": "產業 thesis、技術深度、長線投資觀點，但未明確連結個股股價",
+      "score1to3": "純產品評測、技術細節、與美股股價無直接關聯"
+    },
+    "categoryDescriptions": {
+      "market-action":     "大盤指數動態、Mag 7 財報反應、個股漲跌、分析師升降評、M&A 觸發股價、Fed／FOMC、宏觀數據對股市影響",
+      "ai-tech":           "AI 模型發布、AI 算力與資本支出、AI 監管，以及對 NVDA、MSFT、GOOGL、META、PLTR 等 AI 概念股的影響",
+      "semiconductors":    "晶圓代工、IC 設計、記憶體、半導體設備、製程，與 TSMC、NVDA、AMD、INTC、AVGO、ASML、AMAT、KLAC 等個股動態",
+      "pharma":            "藥廠與生技、臨床試驗、FDA 審查、孤兒藥、基因／細胞治療、CAR-T、GLP-1，與 LLY、NVO、PFE、MRK、JNJ、ABBV、AZN 等個股動態",
+      "aerospace-defense": "軍工合約、航太、國防預算、武器系統、衛星，與 LMT、RTX、BA、GD、NOC、HII 等個股動態",
+      "other":             "前 5 類未涵蓋的美股相關內容"
+    },
+    "keywordInstruction": "用英文 ticker 或關鍵詞，如 \"NVDA\", \"MSFT\", \"earnings\", \"FOMC\", \"FDA\", \"M&A\", \"upgrade\", \"capex\", \"semiconductor\", \"defense\"",
+    "summaryRole": "你是一位美股市場分析摘要專家，熟悉個股 ticker、財報語言、分析師術語、產業鏈，能將事件直接連結到股價影響。",
+    "summaryDomainHint": "美股 ticker、財報術語、產業鏈名詞、FDA／法規語言、分析師升降評、軍工合約類型、Fed 政策語言",
+    "highlightsDomain": "美股投資圈"
+  },
+
+  "report": {
+    "title": "# 🇺🇸 美股日報",
+    "subtitle": "> 大盤／財報／個股動態 + AI／半導體／醫藥／軍工 — AI 精選 Top {topN}",
+    "skipTradingAnalysis": true,
+    "skipMarketSnapshot": true,
+    "footerLines": [
+      "*Powered by [Quant-Radar](https://github.com/) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
+    ]
+  }
+}

@@ -288,10 +288,16 @@ async function fetchFeed(feed: { name: string; xmlUrl: string; htmlUrl: string }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FEED_FETCH_TIMEOUT_MS);
 
+    // SEC.gov requires User-Agent with contact email per their fair-access policy
+    const isSEC = /(^|\.)sec\.gov$/i.test(new URL(feed.xmlUrl).hostname);
+    const userAgent = isSEC
+      ? 'QuantRadar john@bincentive.com'
+      : 'Mozilla/5.0 (compatible; AI-Daily-Digest/1.0)';
+
     const response = await fetch(feed.xmlUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; AI-Daily-Digest/1.0)',
+        'User-Agent': userAgent,
         'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
       },
     });
@@ -1309,11 +1315,7 @@ function generateDigestReport(articles: ScoredArticle[], highlights: string, sta
         const stars = a.trading.stars;
         const starDisplay = stars === 0 ? '☆☆☆☆☆ (0/5)' : '★'.repeat(stars) + '☆'.repeat(5 - stars) + ` (${stars}/5)`;
         const analysisLink = `/analysis/${profile.id}/${dateStr.replace(/-/g, '')}/${globalIndex}`;
-        if (stars > 0) {
-          report += `**交易可行性** ${starDisplay} 📊 [查看深度分析 →](${analysisLink})\n\n`;
-        } else {
-          report += `**交易可行性** ${starDisplay}\n\n`;
-        }
+        report += `**交易可行性** ${starDisplay} 📊 [查看深度分析 →](${analysisLink})\n\n`;
       }
       report += `---\n\n`;
     }
