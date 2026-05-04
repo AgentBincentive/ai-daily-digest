@@ -2,3 +2,4 @@ generated_imgs/
 node_modules/
 output/
 *.log
+.DS_Store
