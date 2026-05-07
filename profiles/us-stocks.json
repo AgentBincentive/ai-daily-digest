@@ -68,7 +68,6 @@
   "report": {
     "title": "# 🇺🇸 美股日報",
     "subtitle": "> 大盤／財報／個股動態 + AI／半導體／醫藥／軍工 — AI 精選 Top {topN}",
-    "skipTradingAnalysis": true,
     "skipMarketSnapshot": true,
     "footerLines": [
       "*Powered by [Quant-Radar](https://github.com/) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
