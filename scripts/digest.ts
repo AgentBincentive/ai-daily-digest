@@ -463,7 +463,10 @@ async function callAnthropic(prompt: string, apiKey: string, model?: string): Pr
     },
     body: JSON.stringify({
       model: model || ANTHROPIC_DEFAULT_MODEL,
-      max_tokens: 4096,
+      // 15-article summary+trading batches exceed 4096 output tokens and get
+      // truncated → JSON parse fails → the whole batch defaults to stars:0.
+      // Match the OpenAI-compatible path (16384); sonnet-4-5 allows far more.
+      max_tokens: 16384,
       messages: [{ role: 'user', content: prompt }],
       // Newer Claude models reject temperature + top_p together; keep only
       // temperature for deterministic scoring (top_p was redundant here).
@@ -960,6 +963,32 @@ async function summarizeArticles(
   // Fetch market data once for all batches
   const marketData = await getMarketSnapshot();
 
+  // Summarize one article on its own. Single-article prompts are small enough
+  // that the response never truncates, so this is the reliable recovery path —
+  // used both to fill indices a batch dropped and to rescue a whole batch whose
+  // JSON failed to parse, instead of silently defaulting everything to 0 stars.
+  const summarizeOne = async (item: (typeof indexed)[number]) => {
+    try {
+      const retryPrompt = buildSummaryPrompt([item], lang, profile, marketData);
+      const retryText = await aiClient.call(retryPrompt);
+      const retryParsed = parseJsonResponse<GeminiSummaryResult>(retryText);
+      if (retryParsed.results?.[0]) {
+        const r = retryParsed.results[0];
+        const rt = r.trading || {};
+        summaries.set(item.index, {
+          titleZh: r.titleZh || '',
+          summary: r.summary || '',
+          reason: r.reason || '',
+          trading: { stars: rt.stars || 0, direction: rt.direction || '觀望', instruments: rt.instruments || '', timeframe: rt.timeframe || '', trigger: rt.trigger || '', riskControl: rt.riskControl || '', model: rt.model || '', historicalRef: rt.historicalRef || '' },
+        });
+        return;
+      }
+    } catch {
+      // fall through to the default below
+    }
+    summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '', trading: { ...defaultTrading } });
+  };
+
   for (let i = 0; i < batches.length; i += MAX_CONCURRENT_GEMINI) {
     const batchGroup = batches.slice(i, i + MAX_CONCURRENT_GEMINI);
     const promises = batchGroup.map(async (batch) => {
@@ -967,7 +996,7 @@ async function summarizeArticles(
         const prompt = buildSummaryPrompt(batch, lang, profile, marketData);
         const responseText = await aiClient.call(prompt);
         const parsed = parseJsonResponse<GeminiSummaryResult>(responseText);
-        
+
         if (parsed.results && Array.isArray(parsed.results)) {
           for (const result of parsed.results) {
             const t = result.trading || {};
@@ -988,35 +1017,28 @@ async function summarizeArticles(
             });
           }
 
-          // Check for missing indices and retry individually
+          // Fill any indices the batch dropped, one at a time.
           const missingItems = batch.filter(item => !summaries.has(item.index));
           if (missingItems.length > 0) {
             console.warn(`[digest] Summary batch incomplete: got ${parsed.results.length}/${batch.length}, retrying ${missingItems.length} missing`);
             for (const item of missingItems) {
-              try {
-                const retryPrompt = buildSummaryPrompt([item], lang, profile, marketData);
-                const retryText = await aiClient.call(retryPrompt);
-                const retryParsed = parseJsonResponse<GeminiSummaryResult>(retryText);
-                if (retryParsed.results?.[0]) {
-                  const r = retryParsed.results[0];
-                  const rt = r.trading || {};
-                  summaries.set(item.index, {
-                    titleZh: r.titleZh || '',
-                    summary: r.summary || '',
-                    reason: r.reason || '',
-                    trading: { stars: rt.stars || 0, direction: rt.direction || '觀望', instruments: rt.instruments || '', timeframe: rt.timeframe || '', trigger: rt.trigger || '', riskControl: rt.riskControl || '', model: rt.model || '', historicalRef: rt.historicalRef || '' },
-                  });
-                }
-              } catch {
-                summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '', trading: { ...defaultTrading } });
-              }
+              await summarizeOne(item);
             }
+          }
+        } else {
+          // Parsed but no results array — recover per-item so the whole batch
+          // doesn't silently fall back to 0 stars.
+          console.warn(`[digest] Summary batch returned no results — retrying ${batch.length} items individually`);
+          for (const item of batch) {
+            await summarizeOne(item);
           }
         }
       } catch (error) {
-        console.warn(`[digest] Summary batch failed: ${error instanceof Error ? error.message : String(error)}`);
+        // A whole-batch parse failure (e.g. truncated JSON) used to zero every
+        // article here; retry each one individually before giving up instead.
+        console.warn(`[digest] Summary batch failed: ${error instanceof Error ? error.message : String(error)} — retrying ${batch.length} items individually`);
         for (const item of batch) {
-          summaries.set(item.index, { titleZh: item.title, summary: item.title, reason: '', trading: { ...defaultTrading } });
+          await summarizeOne(item);
         }
       }
     });
