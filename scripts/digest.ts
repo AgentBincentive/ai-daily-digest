@@ -465,8 +465,9 @@ async function callAnthropic(prompt: string, apiKey: string, model?: string): Pr
       model: model || ANTHROPIC_DEFAULT_MODEL,
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
+      // Newer Claude models reject temperature + top_p together; keep only
+      // temperature for deterministic scoring (top_p was redundant here).
       temperature: 0.3,
-      top_p: 0.8,
     }),
   });
 
