@@ -1,0 +1,89 @@
+{
+  "id": "risk-radar-weekly",
+  "name": "風控週報",
+  "description": "加密資產安全與資金風險週報：彙整過去 7 天的資安事件、交易所與穩定幣風險、協議漏洞、監管執法動態。來源清單依讀者提供的 HackMD 風控來源整理而成。",
+
+  "feeds": [
+    { "name": "CoinDesk", "xmlUrl": "https://www.coindesk.com/arc/outboundfeeds/rss/", "htmlUrl": "https://www.coindesk.com" },
+    { "name": "The Block", "xmlUrl": "https://www.theblock.co/rss.xml", "htmlUrl": "https://www.theblock.co" },
+    { "name": "Blockworks", "xmlUrl": "https://blockworks.co/feed", "htmlUrl": "https://blockworks.co" },
+    { "name": "DL News", "xmlUrl": "https://www.dlnews.com/arc/outboundfeeds/rss/", "htmlUrl": "https://www.dlnews.com" },
+    { "name": "The Defiant", "xmlUrl": "https://thedefiant.io/api/feed", "htmlUrl": "https://thedefiant.io" },
+    { "name": "Decrypt", "xmlUrl": "https://decrypt.co/feed", "htmlUrl": "https://decrypt.co" },
+    { "name": "Protos", "xmlUrl": "https://protos.com/feed/", "htmlUrl": "https://protos.com" },
+    { "name": "Cointelegraph (詐騙專版)", "xmlUrl": "https://cointelegraph.com/rss/tag/scams", "htmlUrl": "https://cointelegraph.com/tags/scams" },
+
+    { "name": "Rekt News", "xmlUrl": "https://rekt.news/rss/feed.xml", "htmlUrl": "https://rekt.news" },
+    { "name": "SlowMist 慢霧", "xmlUrl": "https://slowmist.medium.com/feed", "htmlUrl": "https://www.slowmist.com" },
+    { "name": "Immunefi", "xmlUrl": "https://medium.com/feed/immunefi", "htmlUrl": "https://immunefi.com/blog/research/" },
+    { "name": "PeckShield", "xmlUrl": "https://peckshield.medium.com/feed", "htmlUrl": "https://peckshield.com" },
+    { "name": "BlockSec", "xmlUrl": "https://blocksecteam.medium.com/feed", "htmlUrl": "https://blocksec.com/security-incident" },
+    { "name": "CertiK", "xmlUrl": "https://certik.medium.com/feed", "htmlUrl": "https://www.certik.com" },
+    { "name": "Numen Cyber", "xmlUrl": "https://medium.com/feed/numen-cyber-labs", "htmlUrl": "https://www.numencyber.com" },
+    { "name": "Trail of Bits", "xmlUrl": "https://blog.trailofbits.com/feed/", "htmlUrl": "https://secure-contracts.com" },
+    { "name": "Zellic", "xmlUrl": "https://www.zellic.io/blog/rss.xml", "htmlUrl": "https://www.zellic.io" },
+    { "name": "OpenZeppelin", "xmlUrl": "https://blog.openzeppelin.com/rss.xml", "htmlUrl": "https://blog.openzeppelin.com" },
+    { "name": "Quantstamp", "xmlUrl": "https://quantstamp.com/blog/rss.xml", "htmlUrl": "https://quantstamp.com" },
+
+    { "name": "SEC 新聞稿", "xmlUrl": "https://www.sec.gov/news/pressreleases.rss", "htmlUrl": "https://www.sec.gov/newsroom" },
+    { "name": "CFTC 新聞稿", "xmlUrl": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml", "htmlUrl": "https://www.cftc.gov/PressRoom/PressReleases" },
+    { "name": "美國司法部 (DOJ)", "xmlUrl": "https://www.justice.gov/news/rss?type=press_release", "htmlUrl": "https://www.justice.gov/news" },
+    { "name": "英國 FCA", "xmlUrl": "https://www.fca.org.uk/news/rss.xml", "htmlUrl": "https://www.fca.org.uk/firms/cryptoassets-information" },
+    { "name": "歐盟 ESMA", "xmlUrl": "https://www.esma.europa.eu/rss.xml", "htmlUrl": "https://www.esma.europa.eu" },
+    { "name": "歐盟 EBA", "xmlUrl": "https://www.eba.europa.eu/rss.xml", "htmlUrl": "https://www.eba.europa.eu" },
+    { "name": "Europol", "xmlUrl": "https://www.europol.europa.eu/rss.xml", "htmlUrl": "https://www.europol.europa.eu" },
+    { "name": "金融穩定委員會 (FSB)", "xmlUrl": "https://www.fsb.org/feed/", "htmlUrl": "https://www.fsb.org" },
+
+    { "name": "Chainalysis", "xmlUrl": "https://www.chainalysis.com/feed/", "htmlUrl": "https://www.chainalysis.com/reports/" },
+    { "name": "TRM Labs", "xmlUrl": "https://www.trmlabs.com/post/rss.xml", "htmlUrl": "https://www.trmlabs.com/reports-and-whitepapers" },
+    { "name": "L2BEAT", "xmlUrl": "https://medium.com/feed/l2beat", "htmlUrl": "https://l2beat.com/publications" },
+    { "name": "Glassnode Insights", "xmlUrl": "https://insights.glassnode.com/rss/", "htmlUrl": "https://insights.glassnode.com" }
+  ],
+
+  "categories": {
+    "security-incident": { "emoji": "🚨", "label": "資安事件" },
+    "cex-risk":          { "emoji": "🏦", "label": "交易所風險" },
+    "stablecoin-rwa":    { "emoji": "💵", "label": "穩定幣與 RWA" },
+    "defi-protocol":     { "emoji": "⛓️", "label": "DeFi 協議風險" },
+    "chain-bridge":      { "emoji": "🌉", "label": "鏈與跨鏈橋" },
+    "regulation":        { "emoji": "📜", "label": "監管與執法" },
+    "threat-research":   { "emoji": "🔬", "label": "威脅研究" },
+    "wallet-custody":    { "emoji": "🔑", "label": "錢包與託管" },
+    "other":             { "emoji": "📝", "label": "其他" }
+  },
+
+  "prompts": {
+    "curatorRole": "你是一個加密資產風控策展人，正在為「我們的資金放在哪裡安全」這個問題篩選過去 7 天的情報。你關注的是損失如何發生、誰暴露在風險中、以及我們該不該調整部位或託管方式。價格預測、行情評論、項目宣傳、融資新聞一律排除——那些是別份報告的事。",
+    "audience": "對加密資產資金安全與風險管理決策者的價值：是否會改變我們對某個交易所、穩定幣、協議、鏈或託管方式的信任程度",
+    "relevanceRubric": {
+      "score10": "直接威脅資金安全的重大事件：交易所倒閉或停止提領、主流穩定幣脫鉤、大額協議遭駭、監管凍結資產、託管方出事",
+      "score7to9": "會改變風險評估的實質訊息：漏洞揭露與事後分析、儲備證明疑慮、重大執法行動、L2/跨鏈橋的信任假設變更、新的攻擊手法",
+      "score4to6": "值得追蹤但尚未構成行動理由：審計報告、監管諮詢文件、風險框架與標準、產業威脅統計",
+      "score1to3": "與資金安全無關：價格走勢、融資輪、產品行銷、一般市場評論"
+    },
+    "categoryDescriptions": {
+      "security-incident": "駭客攻擊、漏洞利用、私鑰外洩、rug pull、釣魚與社交工程、事後分析報告",
+      "cex-risk": "中心化交易所的儲備充足性、儲備證明、提領異常、破產與清算、資產隔離條款、營運實體的監管註冊",
+      "stablecoin-rwa": "穩定幣抵押品結構、脫鉤事件、贖回機制、發行方透明度、RWA 代幣化的法律與託管風險",
+      "defi-protocol": "協議治理攻擊、預言機操縱、升級與暫停權限、時間鎖與多簽設定、收益來源可持續性、協議間依賴",
+      "chain-bridge": "跨鏈橋安全、L2 的資料可得性與排序器中心化、狀態驗證風險、驗證者集中度、鏈層事故與回滾",
+      "regulation": "各國執法行動、制裁名單、VASP 註冊與牌照、監管指引與新規、法院判決",
+      "threat-research": "威脅情報報告、攻擊手法統計、洗錢與資金流向分析、產業年度／季度安全回顧",
+      "wallet-custody": "錢包授權風險、簽名詐騙、硬體錢包韌體、私鑰管理、託管與自保管方案比較",
+      "other": "以上都不太適合的"
+    },
+    "keywordInstruction": "用英文，簡短，如 \"exploit\", \"depeg\", \"proof of reserves\", \"bridge hack\", \"oracle manipulation\", \"sanctions\", \"custody\", \"rug pull\", \"governance attack\"",
+    "summaryRole": "你是一個加密資產風控分析師，熟悉智能合約攻擊手法、交易所與穩定幣的償付能力分析、跨鏈橋信任假設、以及各國虛擬資產監管框架。摘要時請保留具體數字（損失金額、脫鉤幅度、受影響資產規模）與受影響的具名對象。",
+    "summaryDomainHint": "攻擊手法名稱、協議與交易所名稱、監管機關與法規名稱、風險術語",
+    "highlightsDomain": "加密資產風控圈"
+  },
+
+  "report": {
+    "skipMarketSnapshot": true,
+    "title": "# 🛡️ 風控週報",
+    "subtitle": "> 過去 7 天資安事件、交易所與穩定幣風險、監管執法，{totalFeeds} 個來源 AI 精選 Top {topN}",
+    "footerLines": [
+      "*Powered by [Quant-Radar](https://github.com/) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
+    ]
+  }
+}
