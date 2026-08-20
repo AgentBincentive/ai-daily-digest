@@ -1,6 +1,6 @@
 {
   "id": "quant-radar",
-  "name": "Quant-Radar 量化情報日報",
+  "name": "Quant-Radar 量化日報",
   "description": "整合 Quant-Radar 爬蟲資料（BlockBeats、X、Telegram、arXiv、Anna's Archive）與量化金融 RSS 的每日精選",
 
   "feeds": [
@@ -71,7 +71,7 @@
   },
 
   "report": {
-    "title": "# \ud83d\udce1 Quant-Radar \u91cf\u5316\u60c5\u5831\u65e5\u5831",
+    "title": "# \ud83d\udce1 \u91cf\u5316\u65e5\u5831",
     "subtitle": "> \u6574\u5408 Quant-Radar \u722c\u87f2 + {totalFeeds} \u500b\u91cf\u5316\u91d1\u878d RSS\uff0cAI \u7cbe\u9078 Top {topN}",
     "footerLines": [
       "*Powered by [Quant-Radar](https://github.com/) + [ai-daily-digest](https://github.com/johnliu33/ai-daily-digest)*"
